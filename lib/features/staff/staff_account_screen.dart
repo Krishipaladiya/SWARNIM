@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app/theme.dart';
@@ -59,12 +60,20 @@ class StaffAccountScreen extends ConsumerWidget {
 
           const SizedBox(height: 8),
           SecondaryButton(
+            label: 'Change password',
+            icon: Icons.lock_outline,
+            onPressed: () => context.push('/staff/change-password'),
+          ),
+          const SizedBox(height: 8),
+          SecondaryButton(
             label: 'Log Out',
             icon: Icons.logout,
             onPressed: () => _confirmSignOut(context, ref),
           ),
 
           const SizedBox(height: 20),
+          const BuiltByCredit(),
+          const SizedBox(height: 6),
           Text(
             'Swarnim Connect · v1.0.0',
             textAlign: TextAlign.center,

@@ -7,7 +7,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme.dart';
 import '../../core/api_client.dart';
 
-/// "Trouble signing in?" - the customer asks for a new password for their unit.
+/// "Trouble signing in?" - asking for a new password.
+///
+/// Serves residents and staff from one form, because the sign-in screen is one
+/// form: somebody who has forgotten their password should not first have to
+/// work out which kind of account they hold. A resident types their unit ID, a
+/// staff member types their work email, and the server decides which it is.
 ///
 /// There is no self-service password *change* anywhere in this app, by design:
 /// passwords are issued by the site office. This screen is the one thing a
@@ -104,8 +109,8 @@ class _PasswordHelpScreenState extends ConsumerState<PasswordHelpScreen> {
 
               if (_sent == null) ...[
                 Text(
-                  'Enter your unit ID and we will send a new password to the mobile '
-                  'number registered against your flat.',
+                  'Enter your unit ID - or your work email if you are staff - and '
+                  'we will send a new password to the mobile number on record.',
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     height: 1.55,
@@ -119,24 +124,26 @@ class _PasswordHelpScreenState extends ConsumerState<PasswordHelpScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Unit ID', style: SwarnimTheme.fieldLabelDark),
+                      Text('Unit ID or work email', style: SwarnimTheme.fieldLabelDark),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _unit,
-                        textCapitalization: TextCapitalization.characters,
+                        // No auto-capitalisation: it would upper-case the first
+                        // letter of a staff email. Unit IDs are matched as typed.
+                        textCapitalization: TextCapitalization.none,
                         autofocus: true,
                         onFieldSubmitted: (_) => _submit(),
                         style: GoogleFonts.poppins(fontSize: 15, color: SwarnimColors.inkOnDark),
                         cursorColor: SwarnimColors.gold,
                         validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Enter the unit ID from your allotment letter'
+                            ? 'Enter your unit ID, or your work email if you are staff'
                             : null,
                         decoration: InputDecoration(
                           // The app theme fills inputs for the light body; this
                           // screen is navy, so it opts out the same way the
                           // login fields do.
                           filled: false,
-                          hintText: 'SWH-A-1203',
+                          hintText: 'SWH-A-1203  ·  name@swarnim.in',
                           hintStyle: GoogleFonts.poppins(
                               fontSize: 15, color: SwarnimColors.placeholderOnDark),
                           enabledBorder: const UnderlineInputBorder(

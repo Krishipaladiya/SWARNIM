@@ -13,6 +13,14 @@ abstract final class SwarnimColors {
   static const navy = Color(0xFF0D2031); // header, footer, status bar
   static const navyMid = Color(0xFF1A2F4A);
   static const navyDeep = Color(0xFF0F1F2E);
+
+  /// The launch animation's own background, averaged over the border of its
+  /// first frame.
+  ///
+  /// Deliberately not [navy]: the animation sits on a lighter, bluer field.
+  /// The Android launch screen and the Flutter splash both use this, so the
+  /// hand-off between them is a change of content and not a flash of colour.
+  static const splashField = Color(0xFF244855);
   static const dividerDark = Color(0xFF2A4361);
   static const inputUnderline = Color(0xFF3A5573);
   static const inkOnDark = Color(0xFFF5F5F5);
@@ -96,7 +104,19 @@ abstract final class SwarnimTheme {
     );
 
     return base.copyWith(
-      scaffoldBackgroundColor: SwarnimColors.bodyTop,
+      // Navy, not the light body colour.
+      //
+      // Every screen in this app is navy chrome wrapping a light panel, and the
+      // panel is painted by SwarnimScreen - so the only times the scaffold's own
+      // colour is visible are the times the chrome should be: behind a route
+      // transition, behind the bottom nav's safe-area inset on a gesture-nav
+      // phone, and for the instant before a screen's first paint. Leaving this
+      // light put a cream flash in all three.
+      scaffoldBackgroundColor: SwarnimColors.navy,
+
+      // Same reason. canvasColor is what Material paints behind a route while
+      // it animates in, and it defaults to the light surface from the scheme.
+      canvasColor: SwarnimColors.navy,
       textTheme: _textTheme(base.textTheme),
 
       filledButtonTheme: FilledButtonThemeData(

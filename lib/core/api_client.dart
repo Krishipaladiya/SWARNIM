@@ -1,23 +1,55 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth.dart';
+import 'http_cache.dart';
 
-/// Build-time configuration.
+/// Where the app talks to.
 ///
-/// Pass a real host with:
-///   flutter run --dart-define=API_BASE_URL=https://api.swarnim.in
+/// A RELEASE build points at the live server by default, and a debug build at
+/// the Android emulator's alias for the host machine. That split is the point:
+/// the old default was the dev machine for every build, so a plain
+/// `flutter build apk --release` shipped an app that could only work on the
+/// laptop that built it - and it failed silently, as a network timeout on the
+/// login screen, with nothing to say why.
 ///
-/// The default is the Android emulator's alias for the host machine - localhost
-/// inside the emulator is the emulator itself, which is the single most common
-/// "why can't the app reach my API" mistake.
+/// --dart-define=API_BASE_URL=... still overrides both, which is how CI and a
+/// staging build pick their own host:
+///   flutter build apk --release --dart-define=API_BASE_URL=https://staging...
+///
+/// The debug host differs by platform because the two simulators disagree
+/// about what "the machine I am running on" means: the Android emulator is a
+/// separate device that reaches the host at 10.0.2.2, while the iOS simulator
+/// shares the Mac's network and reaches it at localhost.
 abstract final class AppConfig {
-  static const apiBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:5199',
-  );
+  /// Admin Central serves the portal and this API from one deployment.
+  ///
+  /// A name CloudVerve controls, deliberately, rather than the SmarterASP
+  /// temp host it resolves to. Once this is in the App Store the value is
+  /// frozen until the next release passes review, so it has to be a name that
+  /// can be repointed at a new server by editing DNS instead of by shipping
+  /// an app update.
+  static const _live = 'https://swarnim.cloudverve.in';
+
+  /// The server's own SmarterASP address. Still works, and is the override to
+  /// build with if the name above is ever not answering.
+  // ignore: unused_field
+  static const _liveDirect = 'https://dhwanipaladiya-001-site1.dtempurl.com';
+
+  static const _override = String.fromEnvironment('API_BASE_URL');
+
+  static String get apiBaseUrl =>
+      _override != '' ? _override : (kReleaseMode ? _live : _debugHost);
+
+  /// Android emulator: 10.0.2.2 is the host machine, and localhost is the
+  /// emulator itself. iOS simulator: the other way round - it shares the Mac's
+  /// network, and 10.0.2.2 is nothing at all.
+  static String get _debugHost =>
+      Platform.isAndroid ? 'http://10.0.2.2:5217' : 'http://localhost:5217';
 }
 
 /// An error the user can actually be shown.
@@ -133,5 +165,22 @@ final dioProvider = Provider<Dio>((ref) {
   ));
 
   dio.interceptors.add(_AuthInterceptor(ref, dio));
+
+  // The disk cache goes AFTER the auth interceptor, deliberately.
+  //
+  // Dio runs request interceptors in order, so auth attaches the bearer token
+  // first and the cache sees a fully formed request; and on the way back the
+  // cache sees the response before auth would retry it. The other order would
+  // mean a cached hit short-circuiting before the token was attached, which
+  // works by accident until the first 401 refresh.
+  //
+  // Opened asynchronously and attached when ready: the provider is
+  // synchronous, and blocking app start on a directory lookup to save a few
+  // kilobytes would be the wrong trade. Requests made in the first
+  // milliseconds simply go to the network, as they did before.
+  HttpDiskCache.open().then((cache) {
+    dio.interceptors.add(HttpCacheInterceptor(cache));
+  });
+
   return dio;
 });

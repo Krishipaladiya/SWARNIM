@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api_client.dart';
 import 'theme.dart';
@@ -142,12 +143,28 @@ class SwarnimScreen extends StatelessWidget {
           ),
           Container(height: 1, color: SwarnimColors.dividerDark),
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: SwarnimColors.bodyGradient,
+            // SafeArea on the BOTTOM only, and it earns its place.
+            //
+            // Android 15 and later force edge-to-edge and ignore
+            // systemNavigationBarColor, so the app has to paint that strip
+            // itself. Inside the tab shell the navy bottom nav does it. On a
+            // route pushed over the shell there is no bottom nav, and without
+            // this the light panel ran under the gesture handle - so the same
+            // app had a navy strip on four screens and a cream one on the
+            // other fifteen.
+            //
+            // It is a no-op in the shell: Scaffold already consumes the bottom
+            // inset for its body when a bottomNavigationBar is present, so this
+            // adds nothing there and adds exactly the inset here.
+            child: SafeArea(
+              top: false,
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: SwarnimColors.bodyGradient,
+                ),
+                child: SingleChildScrollView(padding: padding, child: child),
               ),
-              child: SingleChildScrollView(padding: padding, child: child),
             ),
           ),
         ],
@@ -430,3 +447,196 @@ class InitialsAvatar extends StatelessWidget {
     );
   }
 }
+
+/// The build credit, shown at the foot of the profile screens.
+///
+/// Tapping it opens the CloudVerve site in the phone's browser rather than an
+/// in-app web view: this is somebody leaving the app to read a company page, and
+/// a half-chrome web view with no address bar is the wrong frame for that.
+///
+/// [LaunchMode.externalApplication] is explicit because the default on Android
+/// prefers a Custom Tab, which is exactly the in-app frame being avoided. A
+/// failure to launch is swallowed - a credit line must never interrupt somebody
+/// looking at their own profile.
+class BuiltByCredit extends StatelessWidget {
+  const BuiltByCredit({super.key});
+
+  static final _site = Uri.parse('https://www.cloudverve.in');
+
+  Future<void> _open() async {
+    try {
+      await launchUrl(_site, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // No browser, or the launch was refused. Nothing to recover from here.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: TextButton(
+          onPressed: _open,
+          style: TextButton.styleFrom(
+            foregroundColor: SwarnimColors.metaOnLight,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text.rich(
+            TextSpan(
+              text: 'Developed and Featured By ',
+              children: [
+                TextSpan(
+                  text: 'CloudVerve Technologies',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: SwarnimColors.goldSoft,
+                    decoration: TextDecoration.underline,
+                    decorationColor: SwarnimColors.goldSoft,
+                  ),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: 11, color: SwarnimColors.metaOnLight),
+          ),
+        ),
+      );
+}
+
+/// A row that scrolls sideways and *looks* like it does.
+///
+/// A bare horizontal `ListView` inside the screen's padding slices the last
+/// item off at the padding edge, square, with nothing to say there is more.
+/// On the work queue that put a half chip against the right edge, which reads
+/// as a rendering fault rather than as an invitation to swipe - and somebody
+/// who reads it that way never finds the filters past it.
+///
+/// The fade is a `ShaderMask` rather than a gradient laid over the top,
+/// because the body behind this is itself a gradient: a solid overlay would
+/// only match at one scroll position and show as a pale block everywhere else.
+/// Masking the row's own alpha works against any background.
+///
+/// Both ends fade, and each only when there is actually something hidden that
+/// way - a fade at the left edge on an unscrolled row is a lie about content
+/// that is not there.
+class SwarnimScrollRow extends StatefulWidget {
+  const SwarnimScrollRow({
+    super.key,
+    required this.children,
+    this.height = 32,
+    this.fade = 20,
+  });
+
+  final List<Widget> children;
+  final double height;
+
+  /// How wide the fade is. Wide enough to read as soft, narrow enough that it
+  /// never obscures a whole chip.
+  final double fade;
+
+  @override
+  State<SwarnimScrollRow> createState() => _SwarnimScrollRowState();
+}
+
+class _SwarnimScrollRowState extends State<SwarnimScrollRow> {
+  final _controller = ScrollController();
+  bool _atStart = true;
+  bool _atEnd = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_sync);
+
+    // Whether the row overflows at all is not known until it is laid out.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+  }
+
+  void _sync() {
+    if (!_controller.hasClients) return;
+
+    final position = _controller.position;
+    final start = position.pixels <= position.minScrollExtent + 1;
+    final end = position.pixels >= position.maxScrollExtent - 1;
+
+    if (start != _atStart || end != _atEnd) {
+      setState(() {
+        _atStart = start;
+        _atEnd = end;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_sync);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final row = SizedBox(
+      height: widget.height,
+      child: ListView(
+        controller: _controller,
+        scrollDirection: Axis.horizontal,
+        children: widget.children,
+      ),
+    );
+
+    if (_atStart && _atEnd) return row;
+
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (bounds) {
+        final fade = (widget.fade / bounds.width).clamp(0.0, 0.5);
+
+        return LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            if (_atStart) Colors.white else Colors.transparent,
+            Colors.white,
+            Colors.white,
+            if (_atEnd) Colors.white else Colors.transparent,
+          ],
+          stops: [0, fade, 1 - fade, 1],
+        ).createShader(bounds);
+      },
+      child: row,
+    );
+  }
+}
+
+/// A bottom sheet that keeps clear of the keyboard AND of the phone's gesture
+/// bar.
+///
+/// Every sheet in the app padded for `viewInsets.bottom`, which is the
+/// keyboard, and nothing for `viewPadding.bottom`, which is the gesture bar.
+/// With the keyboard down those are different numbers: the primary button sat
+/// directly under the home gesture, so a tap on "Save update" and a swipe to
+/// leave the app were the same 48 pixels.
+///
+/// Both insets are added rather than compared. When the keyboard is up Android
+/// reports a bottom view padding of zero - the keyboard already covers that
+/// strip - so the sum is always exactly the space that needs clearing.
+Future<T?> showSwarnimSheet<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+}) =>
+    showModalBottomSheet<T>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      builder: (context) {
+        final media = MediaQuery.of(context);
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: media.viewInsets.bottom + media.viewPadding.bottom,
+          ),
+          child: builder(context),
+        );
+      },
+    );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app/theme.dart';
+import '../../app/widgets.dart';
 import '../../core/api_client.dart';
 import '../../core/staff.dart';
 import 'staff_widgets.dart';
@@ -13,10 +14,8 @@ Future<bool?> showStaffUpdateSheet(
   required String complaintId,
   required List<WorkStatus> nextStatuses,
 }) =>
-    showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
+    showSwarnimSheet<bool>(
+      context,
       builder: (_) => _UpdateSheet(complaintId: complaintId, nextStatuses: nextStatuses),
     );
 
@@ -81,12 +80,11 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      // Keeps the note field above the keyboard.
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+    // Keyboard and gesture-bar insets are applied by showSwarnimSheet, so this
+    // only has to worry about its own breathing room.
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -180,7 +178,6 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
             ],
           ),
         ),
-      ),
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../app/theme.dart';
 import '../../app/widgets.dart';
+import '../../core/unit.dart';
 import '../../core/api_client.dart';
 import '../../core/complaints.dart';
 
@@ -154,9 +155,17 @@ class _NewComplaintScreenState extends ConsumerState<NewComplaintScreen> {
   Widget build(BuildContext context) {
     final categories = ref.watch(complaintCategoriesProvider);
 
+    // The customer's OWN unit. This was the string 'SWH-A-1203' - the login
+    // screen's placeholder, pasted in as if it were data - so every customer
+    // filing a complaint was shown somebody else's flat number on their own
+    // form. The dashboard is already loaded by the time this screen can be
+    // reached, so there is nothing to wait for; the subtitle is simply dropped
+    // if it somehow is not.
+    final unit = ref.watch(dashboardProvider).value;
+
     return SwarnimScreen(
       title: 'New Complaint',
-      subtitle: 'SWH-A-1203',
+      subtitle: unit?.unitLabel,
       leading: _BackButton(onTap: () => context.pop()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

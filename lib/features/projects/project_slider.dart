@@ -20,7 +20,23 @@ class ProjectSlider extends ConsumerStatefulWidget {
     required this.signedIn,
     this.onDark = false,
     this.height = 200,
+    this.heading,
+    this.leadIn,
   });
+
+  /// The section label, e.g. "OUR PROJECTS".
+  ///
+  /// Owned by this widget rather than written above it by the caller. The
+  /// slider renders nothing when the builder has uploaded no photographs, and
+  /// a heading outside it survived that - so both the login screen and the
+  /// home screen showed "OUR PROJECTS" over an empty gap. A label and the
+  /// thing it labels have to appear and disappear together, which only works
+  /// if one widget decides.
+  final String? heading;
+
+  /// Rendered above the heading, and dropped with it - the home screen's rule
+  /// separating this section from the one before.
+  final Widget? leadIn;
 
   /// Signed-in sliders fetch through Dio with the bearer token; the login
   /// screen fetches the public route with no credentials at all.
@@ -98,6 +114,17 @@ class _ProjectSliderState extends ConsumerState<ProjectSlider> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (widget.leadIn != null) widget.leadIn!,
+            if (widget.heading != null) ...[
+              Text(
+                widget.heading!,
+                textAlign: widget.onDark ? TextAlign.center : TextAlign.start,
+                style: widget.onDark
+                    ? SwarnimTheme.fieldLabelDark
+                    : SwarnimTheme.fieldLabel,
+              ),
+              const SizedBox(height: 10),
+            ],
             SizedBox(
               height: widget.height,
               child: ClipRRect(

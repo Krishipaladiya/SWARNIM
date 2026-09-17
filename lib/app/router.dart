@@ -6,6 +6,8 @@ import '../core/auth.dart';
 import '../features/account/account_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/password_help_screen.dart';
+import '../features/auth/set_password_screen.dart';
+import '../features/brand/splash_screen.dart';
 import '../features/complaints/complaint_detail_screen.dart';
 import '../features/complaints/complaints_screen.dart';
 import '../features/complaints/new_complaint_screen.dart';
@@ -27,6 +29,11 @@ import '../features/staff/staff_queue_screen.dart';
 class _AuthListenable extends ChangeNotifier {
   _AuthListenable(Ref ref) {
     ref.listen(authControllerProvider, (_, _) => notifyListeners());
+
+    // The launch film also decides when the app may move on, so the router has
+    // to be told when it ends - otherwise redirect never re-runs and the splash
+    // stays up after auth has long since resolved.
+    ref.listen(splashDoneProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -52,25 +59,62 @@ final routerProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authControllerProvider);
       final location = state.matchedLocation;
 
+      // Hold the launch screen until the film has had its turn, even when the
+      // session resolved instantly. Auth and the film run in parallel, so this
+      // costs nothing on a slow connection and is the whole point on a fast one.
+      if (!ref.read(splashDoneProvider)) {
+        return location == '/splash' ? null : '/splash';
+      }
+
       return switch (auth) {
         AuthUnknown() => location == '/splash' ? null : '/splash',
         // The password-help page is reachable while signed out, because being
         // locked out is precisely when it is needed.
         SignedOut() =>
           (location == '/login' || location == '/password-help') ? null : '/login',
+        // Password first, for both apps.
+        //
+        // Placed ABOVE the two app branches on purpose: a session that still
+        // owes a password change goes to one screen and nowhere else, so there
+        // is no route - deep link, restored tab, back gesture - that reaches
+        // the app around it. The office-issued password is known to whoever
+        // issued it, and this is the only thing standing between that and a
+        // customer's records.
+        SignedIn(mustChangePassword: true) =>
+          location == '/set-password' ? null : '/set-password',
+
         SignedIn(isStaff: true) =>
           location.startsWith('/staff') ? null : '/staff/home',
         SignedIn() =>
-          (location == '/login' || location == '/splash' || location.startsWith('/staff'))
+          (location == '/login' || location == '/splash' || location == '/set-password'
+              || location.startsWith('/staff'))
               ? '/home'
               : null,
       };
     },
 
     routes: [
-      GoRoute(path: '/splash', builder: (_, _) => const _SplashScreen()),
+      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/password-help', builder: (_, _) => const PasswordHelpScreen()),
+
+      // Outside both shells: it has no bottom navigation, because there is
+      // nowhere else to go from it until the password is set.
+      GoRoute(path: '/set-password', builder: (_, _) => const SetPasswordScreen()),
+
+      // The same screen, chosen rather than imposed - reached from My Profile
+      // by a customer whose password is already their own. Outside the shell
+      // for the same reason as the gate: changing a password signs every
+      // session out, so there is no tab to come back to mid-flow.
+      // Two paths, one screen. The redirect above sends a staff session back
+      // to /staff/* and a customer session away from it, so a single shared
+      // path would be bounced for whichever half did not own the prefix.
+      GoRoute(
+          path: '/change-password',
+          builder: (_, _) => const SetPasswordScreen(forced: false)),
+      GoRoute(
+          path: '/staff/change-password',
+          builder: (_, _) => const SetPasswordScreen(forced: false)),
 
       // ------------------------------------------------------------ customer
       //
@@ -174,20 +218,3 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-class _SplashScreen extends StatelessWidget {
-  const _SplashScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
-    );
-  }
-}

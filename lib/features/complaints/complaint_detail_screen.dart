@@ -226,20 +226,16 @@ class _Gallery extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return SwarnimScrollRow(
       height: 96,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: attachments.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final a = attachments[i];
-
-          return ClipRRect(
+      children: [
+        for (var i = 0; i < attachments.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          ClipRRect(
             borderRadius: BorderRadius.circular(SwarnimRadius.control),
             child: SizedBox(
               width: 96,
-              child: a.isVideo
+              child: attachments[i].isVideo
                   // No inline player: a decoder package is not in the app yet,
                   // and a broken player is worse than an honest placeholder.
                   ? Container(
@@ -249,11 +245,14 @@ class _Gallery extends StatelessWidget {
                             color: Colors.white70, size: 30),
                       ),
                     )
-                  : AuthedImage(path: '/api/v1/files/${a.id}', fit: BoxFit.cover),
+                  : AuthedImage(
+                      path: '/api/v1/files/${attachments[i].id}',
+                      fit: BoxFit.cover,
+                    ),
             ),
-          );
-        },
-      ),
+          ),
+        ],
+      ],
     );
   }
 }

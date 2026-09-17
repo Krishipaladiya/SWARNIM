@@ -327,25 +327,20 @@ class _ProjectSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Divider(color: SwarnimColors.dividerLight, height: 1),
-        const SizedBox(height: 20),
-        Text('OUR PROJECTS',
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-              color: SwarnimColors.metaOnLight,
-            )),
-        const SizedBox(height: 10),
-
-        // Signed in, so this includes photographs the builder chose to keep off
-        // the login screen. The widget renders nothing at all when there are
-        // none, which is why there is no empty-state here.
-        const ProjectSlider(signedIn: true),
-      ],
+    // Signed in, so this includes photographs the builder chose to keep off the
+    // login screen. Heading and divider are handed to the slider rather than
+    // drawn here: it renders nothing when there are no photographs, and a
+    // heading left outside it showed "OUR PROJECTS" over an empty gap.
+    return const ProjectSlider(
+      signedIn: true,
+      heading: 'OUR PROJECTS',
+      leadIn: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Divider(color: SwarnimColors.dividerLight, height: 1),
+          SizedBox(height: 20),
+        ],
+      ),
     );
   }
 }

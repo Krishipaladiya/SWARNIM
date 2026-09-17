@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -100,6 +101,15 @@ class AccountScreen extends ConsumerWidget {
             ),
 
             const SizedBox(height: 8),
+            // Above "Request a new password" deliberately: changing a password
+            // you know is the ordinary case, and asking the office to issue one
+            // is the fallback for having lost it.
+            SecondaryButton(
+              label: 'Change password',
+              icon: Icons.lock_outline,
+              onPressed: () => context.push('/change-password'),
+            ),
+            const SizedBox(height: 8),
             SecondaryButton(
               label: 'Request a new password',
               icon: Icons.key_outlined,
@@ -113,6 +123,8 @@ class AccountScreen extends ConsumerWidget {
             ),
 
             const SizedBox(height: 20),
+            const BuiltByCredit(),
+            const SizedBox(height: 6),
             Text(
               'Swarnim Connect · v1.0.0',
               textAlign: TextAlign.center,
@@ -131,8 +143,9 @@ class AccountScreen extends ConsumerWidget {
     return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
   }
 
-  /// There is no self-service password change by design - a new password is
-  /// issued by the site office and sent by SMS. Until the gateway exists this
+  /// The fallback for a customer who cannot use "Change password" because they
+  /// no longer know the current one. Only the office can help there: it holds
+  /// the issued password and can reissue. Until the SMS gateway exists this
   /// explains the process rather than pretending to do it.
   void _requestPassword(BuildContext context) {
     showDialog<void>(

@@ -208,10 +208,8 @@ Future<bool?> showFollowUpSheet(
   required String leadId,
   required LeadStatus current,
 }) =>
-    showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
+    showSwarnimSheet<bool>(
+      context,
       builder: (_) => _FollowUpSheet(leadId: leadId, current: current),
     );
 
@@ -274,11 +272,10 @@ class _FollowUpSheetState extends ConsumerState<_FollowUpSheet> {
   Widget build(BuildContext context) {
     final closing = _statusAfter == LeadStatus.lost;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+    // Keyboard and gesture-bar insets come from showSwarnimSheet.
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -390,8 +387,7 @@ class _FollowUpSheetState extends ConsumerState<_FollowUpSheet> {
                 busy: _busy,
                 onPressed: _busy ? null : _save,
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

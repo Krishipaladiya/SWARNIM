@@ -102,11 +102,8 @@ class _StaffQueueScreenState extends ConsumerState<StaffQueueScreen> {
 
           const SizedBox(height: 12),
 
-          SizedBox(
-            height: 32,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
+          SwarnimScrollRow(
+            children: [
                 for (final scope in QueueScope.values) ...[
                   _Chip(
                     label: scope.label,
@@ -124,8 +121,7 @@ class _StaffQueueScreenState extends ConsumerState<StaffQueueScreen> {
                   onTap: () =>
                       ref.read(queueFilterProvider.notifier).setOpenOnly(!filter.openOnly),
                 ),
-              ],
-            ),
+            ],
           ),
 
           const SizedBox(height: 16),

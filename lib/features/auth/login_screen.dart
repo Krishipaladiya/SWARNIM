@@ -6,7 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme.dart';
 import '../../core/api_client.dart';
 import '../../core/auth.dart';
+import '../brand/splash_screen.dart';
 import '../projects/project_slider.dart';
+import 'auth_widgets.dart';
 
 /// Full-navy sign-in screen. Unlike the rest of the app there is no light body -
 /// the mockup keeps login entirely on the dark ground.
@@ -70,23 +72,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const _BrandMark(),
                 const SizedBox(height: 20),
 
-                Text('Unit ID or email', style: SwarnimTheme.fieldLabelDark),
+                // Labelled for the customer, who is almost everybody signing in
+                // and always signs in with a unit ID.
+                //
+                // Staff type their work email into this same box and it still
+                // works - the server decides what an identifier is and routes on
+                // the answer. Naming both here made every resident read a second
+                // option that was never theirs, so the label names the common
+                // case and the rare one simply keeps working.
+                Text('Unit ID', style: SwarnimTheme.fieldLabelDark),
                 const SizedBox(height: 8),
-                _DarkField(
+                DarkField(
                   controller: _loginId,
-                  hint: 'SWH-A-1203  ·  name@swarnim.in',
+                  hint: 'SWH-A-1203',
                   // No auto-capitalisation: it would upper-case the first letter
-                  // of an email address, and unit IDs are matched as typed.
+                  // of a staff email, and unit IDs are matched as typed.
                   autofillHints: const [AutofillHints.username],
                   validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Enter the unit ID from your allotment letter, or your work email'
+                      ? 'Enter the unit ID from your allotment letter'
                       : null,
                 ),
 
                 const SizedBox(height: 14),
                 Text('Password', style: SwarnimTheme.fieldLabelDark),
                 const SizedBox(height: 8),
-                _DarkField(
+                DarkField(
                   controller: _password,
                   hint: '••••••••',
                   obscure: _obscure,
@@ -106,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 if (_error != null) ...[
                   const SizedBox(height: 8),
-                  _ErrorBanner(_error!),
+                  ErrorBanner(_error!),
                 ],
 
                 const SizedBox(height: 16),
@@ -125,9 +135,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
 
                 const SizedBox(height: 20),
-                Text('OUR PROJECTS', style: SwarnimTheme.fieldLabelDark, textAlign: TextAlign.center),
-                const SizedBox(height: 10),
-                const ProjectSlider(signedIn: false, onDark: true),
+
+                // The heading belongs to the slider, so it disappears with it
+                // when the builder has uploaded no photographs.
+                const ProjectSlider(
+                  signedIn: false,
+                  onDark: true,
+                  heading: 'OUR PROJECTS',
+                ),
                 const SizedBox(height: 18),
                 const _SupportFooter(),
               ],
@@ -139,125 +154,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
+/// The supplied lock-up, at the size the mockup reserved for it.
+///
+/// Replaces the placeholder circled "S" that stood in until the artwork
+/// arrived. No caption underneath: the logo already says SWARNIM.
 class _BrandMark extends StatelessWidget {
   const _BrandMark();
 
   @override
-  Widget build(BuildContext context) {
-    // Placeholder for the supplied logo (the mockup references a 130px image).
-    // Drop the asset in and replace this with Image.asset to match exactly.
-    return Column(
-      children: [
-        Container(
-          width: 68,
-          height: 68,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: Border.all(color: SwarnimColors.gold, width: 1.5),
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            'S',
-            style: GoogleFonts.poppins(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              color: SwarnimColors.gold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'SWARNIM',
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 5,
-            color: SwarnimColors.inkOnDark,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => const Center(child: SwarnimLogo(width: 196));
 }
 
-/// Underlined field on the navy ground, per the mockup.
-class _DarkField extends StatelessWidget {
-  const _DarkField({
-    required this.controller,
-    required this.hint,
-    this.obscure = false,
-    this.suffix,
-    this.validator,
-    this.onSubmitted,
-    this.autofillHints,
-  });
-
-  final TextEditingController controller;
-  final String hint;
-  final bool obscure;
-  final Widget? suffix;
-  final String? Function(String?)? validator;
-  final void Function(String)? onSubmitted;
-  final Iterable<String>? autofillHints;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscure,
-      validator: validator,
-      onFieldSubmitted: onSubmitted,
-      autofillHints: autofillHints,
-      textInputAction:
-          onSubmitted != null ? TextInputAction.done : TextInputAction.next,
-      style: GoogleFonts.poppins(fontSize: 15, color: SwarnimColors.inkOnDark),
-      cursorColor: SwarnimColors.gold,
-      decoration: InputDecoration(
-        filled: false,
-        hintText: hint,
-        hintStyle:
-            GoogleFonts.poppins(fontSize: 15, color: SwarnimColors.placeholderOnDark),
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        suffixIcon: suffix,
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: SwarnimColors.inputUnderline, width: 2),
-        ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: SwarnimColors.gold, width: 2),
-        ),
-        errorBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: SwarnimColors.statusOpen, width: 2),
-        ),
-        focusedErrorBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: SwarnimColors.statusOpen, width: 2),
-        ),
-        errorStyle: GoogleFonts.poppins(fontSize: 11, color: SwarnimColors.goldHover),
-      ),
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner(this.message);
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: SwarnimColors.statusOpen.withValues(alpha: 0.15),
-        border: Border(left: BorderSide(color: SwarnimColors.statusOpen, width: 3)),
-        borderRadius: BorderRadius.circular(SwarnimRadius.control),
-      ),
-      child: Text(
-        message,
-        style: GoogleFonts.poppins(fontSize: 12, color: SwarnimColors.inkOnDark),
-      ),
-    );
-  }
-}
 
 
 class _SupportFooter extends StatelessWidget {

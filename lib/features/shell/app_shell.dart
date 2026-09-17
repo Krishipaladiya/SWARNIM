@@ -39,6 +39,11 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Stated rather than inherited. This is the one scaffold whose colour is
+      // actually seen - the branch screens do not extend under the bottom
+      // nav's safe-area inset, so on a gesture-nav phone this strip is the
+      // bottom of the app.
+      backgroundColor: SwarnimColors.navy,
       body: shell,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(

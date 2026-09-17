@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api_client.dart';
+import 'http_cache.dart';
 
 /// Tokens live in the platform keystore (Android Keychain / iOS Keychain),
 /// never in SharedPreferences - a refresh token is a 30-day credential.
@@ -14,8 +17,24 @@ class TokenStore {
   static const _accessKey = 'swarnim.access_token';
   static const _refreshKey = 'swarnim.refresh_token';
 
+  /// The unit ID or staff email this device signed in with. Kept beside the
+  /// tokens so that a password change works on a session RESTORED from them,
+  /// not only on one made minutes earlier in the same process - see
+  /// [AuthController.setPassword].
+  ///
+  /// Not a secret in the way the tokens are: for a customer it is the unit ID
+  /// printed on the allotment letter and shown in the app's own header, and
+  /// for staff it is their work email. It is stored here rather than in plain
+  /// preferences only because it belongs to the same lifecycle - cleared by
+  /// the same [clear].
+  static const _identifierKey = 'swarnim.identifier';
+
   Future<String?> readAccessToken() => _storage.read(key: _accessKey);
   Future<String?> readRefreshToken() => _storage.read(key: _refreshKey);
+  Future<String?> readIdentifier() => _storage.read(key: _identifierKey);
+
+  Future<void> writeIdentifier(String identifier) =>
+      _storage.write(key: _identifierKey, value: identifier);
 
   Future<void> save({required String access, required String refresh}) async {
     await _storage.write(key: _accessKey, value: access);
@@ -25,6 +44,7 @@ class TokenStore {
   Future<void> clear() async {
     await _storage.delete(key: _accessKey);
     await _storage.delete(key: _refreshKey);
+    await _storage.delete(key: _identifierKey);
   }
 }
 
@@ -106,10 +126,61 @@ class AuthController extends Notifier<AuthState> {
         'identifier': identifier,
         'password': password,
       });
+
+      // Remembered for the one job below: re-establishing the session
+      // immediately after a password change. Written to storage as well as
+      // held in memory, so that the change also works on a session restored
+      // from disk - which is every session after the first launch.
+      _lastIdentifier = identifier;
+      await _store.writeIdentifier(identifier);
+
       await _applyTokens(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.from(e);
     }
+  }
+
+  /// The identifier used for the current sign-in, held for [setPassword].
+  String? _lastIdentifier;
+
+  /// Replaces the password on this login with one the customer chooses.
+  ///
+  /// This is the second half of the entry flow: the site office issues a
+  /// generated password, the customer signs in with it once, and here they
+  /// replace it with their own. Until they do, the password they are using is
+  /// one somebody at the office could read off a list.
+  ///
+  /// The server revokes every session on a successful change - that is the
+  /// point of changing a password - which would otherwise sign this device out
+  /// the moment it succeeded. So it signs straight back in with the new
+  /// password, which it has in hand. The customer sees a screen that saves and
+  /// moves on; the tokens underneath are new.
+  Future<void> setPassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.post('/api/v1/auth/change-password', data: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      });
+    } on DioException catch (e) {
+      throw ApiException.from(e);
+    }
+
+    // Memory first, storage second. Storage covers the ordinary case - the
+    // app was restarted at some point since signing in - and the null case
+    // that remains is a session predating this being stored at all.
+    final identifier = _lastIdentifier ?? await _store.readIdentifier();
+
+    if (identifier == null) {
+      // Nothing to sign back in with. The password IS changed, so say nothing
+      // went wrong and let them sign in again with the one they just chose.
+      await signOut();
+      return;
+    }
+
+    await signIn(identifier: identifier, password: newPassword);
   }
 
   /// Returns whether the session is still valid. Used by the API client's 401
@@ -146,14 +217,40 @@ class AuthController extends Notifier<AuthState> {
     }
 
     await _store.clear();
+
+    // The cached responses go with the session.
+    //
+    // Entries are namespaced per user, so the next person to sign in would not
+    // READ these - but a phone that has been handed on should not still have
+    // the previous customer's documents and complaint list sitting on disk at
+    // all. Deleting on sign-out is the difference between "they cannot see it"
+    // and "it is not there".
+    try {
+      (await HttpDiskCache.open()).clear();
+    } catch (_) {
+      // Signing out must not fail because a directory could not be emptied.
+    }
+
     state = const SignedOut();
   }
 
   Future<void> _applyTokens(Map<String, dynamic> data) async {
+    final access = data['accessToken'] as String;
+
     await _store.save(
-      access: data['accessToken'] as String,
+      access: access,
       refresh: data['refreshToken'] as String,
     );
+
+    // Namespace the disk cache to this user, so two customers sharing a phone
+    // can never read each other's cached lists. Derived from the token's
+    // subject rather than the token itself, which rotates every few minutes.
+    try {
+      (await HttpDiskCache.open()).userKey = _subjectOf(access);
+    } catch (_) {
+      // An unreadable token just means the cache stays in the 'anon'
+      // namespace - safe, because that namespace is cleared on sign-out too.
+    }
 
     state = SignedIn(
       displayName: data['displayName'] as String? ?? '',
@@ -170,3 +267,32 @@ class AuthController extends Notifier<AuthState> {
 
 final authControllerProvider =
     NotifierProvider<AuthController, AuthState>(AuthController.new);
+
+/// The `sub` claim of a JWT, without verifying it.
+///
+/// Used only to namespace the on-device cache. Verification is the server's
+/// job and happens on every request; reading the subject here is no more
+/// trusted than reading the display name, and a forged value would only give
+/// somebody a different cache directory on their own phone.
+String _subjectOf(String jwt) {
+  try {
+    final parts = jwt.split('.');
+    if (parts.length != 3) return 'anon';
+
+    // Base64url without padding, which is what JWT uses and what
+    // base64.decode refuses.
+    var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+    payload = payload.padRight(payload.length + (4 - payload.length % 4) % 4, '=');
+
+    final claims = jsonDecode(utf8.decode(base64.decode(payload)));
+
+    // Both halves: two customers can share a subject id across kinds, and a
+    // staff token and a customer token must never share a cache namespace.
+    final kind = claims['swarnim:kind'] ?? 'unknown';
+    final sub = claims['sub'] ?? 'unknown';
+
+    return '$kind:$sub';
+  } catch (_) {
+    return 'anon';
+  }
+}
