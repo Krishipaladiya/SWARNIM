@@ -26,18 +26,9 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+
 	<!-- ============================================================
-	     Permission strings.
-
-	     iOS does not ask and then refuse: calling the camera, the photo
-	     library or location with no usage string is an immediate hard
-	     crash, with a console message nobody sees on a test device. The
-	     app already used all three, so it would have died the first time
-	     anybody filed a complaint with a photo or finished a job.
-
-	     The wording matters too - it is what the customer reads in the
-	     system prompt, and Apple rejects builds whose strings do not say
-	     what the data is actually for.
+	     Permission strings
 	     ============================================================ -->
 
 	<key>NSCameraUsageDescription</key>
@@ -55,29 +46,29 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Swarnim Connect confirms site staff are at the property when they request a closure code from the customer. Your location is not used when you are signed in as a resident.</string>
 
-	<!-- Cleartext HTTP to a development API on the same Wi-Fi.
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Swarnim Connect uses your location to confirm that site staff are at the property when required for complaint and work completion verification.</string>
 
-	     NSAllowsLocalNetworking permits plain HTTP to LAN addresses and
-	     .local hostnames only. It is deliberately NOT
-	     NSAllowsArbitraryLoads, which would switch off transport security
-	     for the whole internet and is also an App Store review question
-	     you do not want to answer. Production must be HTTPS regardless. -->
-	<!--
-		Declares the app uses no non-exempt encryption, which is true: it
-		talks HTTPS and keeps tokens in the Keychain, both of which are
-		Apple's own exempt crypto. Without this key App Store Connect stops
-		every single upload to ask the export-compliance question by hand,
-		and the build sits there unable to reach TestFlight until somebody
-		notices and answers it.
-	-->
+	<!-- ============================================================
+	     Encryption
+	     ============================================================ -->
+
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+
+	<!-- ============================================================
+	     App Transport Security
+	     ============================================================ -->
 
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+
+	<!-- ============================================================
+	     Scene configuration
+	     ============================================================ -->
 
 	<key>UIApplicationSceneManifest</key>
 	<dict>
@@ -100,18 +91,21 @@
 			</array>
 		</dict>
 	</dict>
+
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
