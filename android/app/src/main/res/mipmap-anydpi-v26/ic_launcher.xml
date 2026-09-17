@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Adaptive icon. The launcher applies its own mask (circle, squircle, rounded
+    square depending on the device), so the artwork has to survive being cut:
+    the navy fills the whole background layer and the wordmark sits inside the
+    guaranteed-visible middle 72 of 108 dp.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/swarnim_navy" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

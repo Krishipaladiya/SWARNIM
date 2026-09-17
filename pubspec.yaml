@@ -42,7 +42,9 @@ dependencies:
   google_fonts: ^8.2.1
   image_picker: ^1.2.3
   geolocator: ^14.0.3
-
+  open_filex: ^4.7.0
+  path_provider: ^2.1.6
+  url_launcher: ^6.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -59,6 +61,27 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  assets:
+    - assets/brand/logo.png
+    - assets/brand/splash.gif
+
+    # Poppins, BUNDLED rather than fetched.
+    #
+    # google_fonts downloads a family from fonts.gstatic.com the first time it
+    # is used and caches it on the device. That is a network round trip before
+    # any text can be drawn in the app's own typeface, and on a slow or absent
+    # connection it does not degrade quietly: on the emulator it hung the UI
+    # thread long enough for Android to offer to close the app.
+    #
+    # Files placed here are picked up by google_fonts itself, so every
+    # GoogleFonts.poppins(...) call in the app - all 161 of them - keeps
+    # working unchanged and now resolves from the asset. See
+    # GoogleFonts.config.allowRuntimeFetching in main.dart, which makes the
+    # network path an error rather than a silent fallback.
+    #
+    # Four weights, which is what the app actually uses: w400 (body), w500,
+    # w600 (42 places) and w700. About 630KB in total.
+    - assets/google_fonts/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The navy the supplied logo artwork was cut against, and the app's
+         chrome colour. Kept here as well as in Dart because the native launch
+         screen runs before any Dart has executed. -->
+    <color name="swarnim_navy">#0D2031</color>
+
+    <!-- The launch animation's own background, measured from its edges. It is
+         NOT the same navy as the logo - the film sits on a slightly lighter,
+         bluer field. The native launch screen uses this so that the handover
+         to the Dart screen, where the film starts playing, is a change of
+         content and not a change of colour. -->
+    <color name="swarnim_splash">#244855</color>
+</resources>
