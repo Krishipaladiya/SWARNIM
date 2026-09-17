@@ -49,6 +49,9 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Swarnim Connect records audio only as part of a video you choose to attach to a complaint.</string>
 
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Swarnim Connect uses the local network to connect to services when required for app functionality.</string>
+
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Swarnim Connect confirms site staff are at the property when they request a closure code from the customer. Your location is not used when you are signed in as a resident.</string>
 
