@@ -46,12 +46,22 @@ class SplashDone extends Notifier<bool> {
 
 /// The launch screen: the brand animation, then straight to the app.
 ///
-/// **Why the GIF and not the MP4.** The supplied MP4 is HEVC, recorded on an
-/// iPhone. It plays on modern hardware, but plenty of cheaper Android handsets
-/// have no HEVC decoder - and even where it works, ExoPlayer needs a platform
-/// view and a codec handshake before the first frame, which meant nobody ever
-/// saw the animation. `Image.asset` animates a GIF on the raster thread with no
-/// plugin, no codec and nothing to fail.
+/// **Why an animated WebP and not the MP4.** The supplied MP4 is HEVC,
+/// recorded on an iPhone. It plays on modern hardware, but plenty of cheaper
+/// Android handsets have no HEVC decoder - and even where it works, ExoPlayer
+/// needs a platform view and a codec handshake before the first frame, which
+/// meant nobody ever saw the animation. `Image.asset` animates a WebP on the
+/// raster thread with no plugin, no codec and nothing to fail.
+///
+/// **Why WebP and not the GIF it started as.** The artwork was supplied with
+/// its background painted in - a teal centre fading to an olive vignette - so
+/// it only ever looked right on a teal screen, and on the app's navy it read
+/// as a dirty rectangle floating in the middle. That background has been cut
+/// out and the animation now carries an alpha channel, which GIF's 1-bit
+/// transparency cannot express and WebP can. The consequence worth knowing:
+/// the animation has no background of its own any more, so it takes whatever
+/// this scaffold is painted - it can never drift out of step with the app's
+/// colour again.
 ///
 /// **Nothing else draws the wordmark.** The Android launch screen, the iOS
 /// storyboard and this scaffold are all bare [SwarnimColors.splashField] - the
@@ -83,7 +93,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   /// will not open.
   static const _backstop = Duration(seconds: 8);
 
-  static const _image = AssetImage('assets/brand/splash.gif');
+  static const _image = AssetImage('assets/brand/splash.webp');
 
   ImageStream? _stream;
   ImageStreamListener? _listener;

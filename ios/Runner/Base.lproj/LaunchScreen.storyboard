@@ -19,7 +19,7 @@
                             <!-- No launch image: the animation draws the wordmark itself. -->
                         </subviews>
                         <!-- #0D2031, the navy the logo artwork was cut against. White here left a border round the logo on every cold start. -->
-                        <color key="backgroundColor" red="0.141176470588" green="0.282352941176" blue="0.333333333333" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" red="0.05098039215686274" green="0.12549019607843137" blue="0.19215686274509805" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="YRO-k0-Ey4" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="1a2-6s-vTC"/>
                             <constraint firstItem="YRO-k0-Ey4" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="4X2-HB-R7a"/>

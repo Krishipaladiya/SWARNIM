@@ -14,13 +14,19 @@ abstract final class SwarnimColors {
   static const navyMid = Color(0xFF1A2F4A);
   static const navyDeep = Color(0xFF0F1F2E);
 
-  /// The launch animation's own background, averaged over the border of its
-  /// first frame.
+  /// The launch animation's background.
   ///
-  /// Deliberately not [navy]: the animation sits on a lighter, bluer field.
-  /// The Android launch screen and the Flutter splash both use this, so the
-  /// hand-off between them is a change of content and not a flash of colour.
-  static const splashField = Color(0xFF244855);
+  /// Now the same navy as the rest of the app's chrome. It used to be the
+  /// teal the animation was supplied on (#244855), because the GIF had that
+  /// colour baked in behind the wordmark - a navy scaffold would have shown
+  /// the animation as a teal rectangle in the middle of a navy screen. The GIF
+  /// itself has since been re-backgrounded onto this navy, so every launch
+  /// surface can agree on one colour.
+  ///
+  /// Kept as its own name rather than folded into [navy]: the Android launch
+  /// XML, the iOS storyboard and the GIF all have to be changed together, and
+  /// a named token is where somebody looks to find out why.
+  static const splashField = navy;
   static const dividerDark = Color(0xFF2A4361);
   static const inputUnderline = Color(0xFF3A5573);
   static const inkOnDark = Color(0xFFF5F5F5);
@@ -146,6 +152,35 @@ abstract final class SwarnimTheme {
         hintStyle: GoogleFonts.poppins(
           fontSize: 13,
           color: SwarnimColors.metaOnLight.withValues(alpha: 0.7),
+        ),
+      ),
+
+      // Every dialog in the app, in one place.
+      //
+      // Material 3 gives AlertDialog a 28px pill radius and a tinted surface,
+      // which sat beside cards built on a 4px radius and read as a component
+      // borrowed from a different app. Setting it on the theme rather than at
+      // the five call sites means a dialog added later cannot forget.
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white,
+
+        // M3 tints an elevated surface with the primary colour. On white with
+        // a navy primary that is a faint blue wash, which looked like a
+        // rendering fault rather than a choice.
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SwarnimRadius.control),
+        ),
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: SwarnimColors.inkOnLight,
+        ),
+        contentTextStyle: GoogleFonts.poppins(
+          fontSize: 13,
+          height: 1.45,
+          color: SwarnimColors.metaOnLight,
         ),
       ),
 

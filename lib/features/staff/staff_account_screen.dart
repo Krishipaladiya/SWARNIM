@@ -21,6 +21,11 @@ class StaffAccountScreen extends ConsumerWidget {
     final counts = ref.watch(staffCountsProvider);
 
     return SwarnimScreen(
+      // Pull down to reload. No refresh button: the gesture is
+      // the affordance every phone user already has.
+      onRefresh: () async {
+        ref.invalidate(staffCountsProvider);
+      },
       title: 'My Profile',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -34,6 +34,48 @@ class CustomerDocument {
   final String contentType;
   final bool isPdf;
 
+  /// The file extension this document must be saved under.
+  ///
+  /// It decides whether the phone can open the file at all. Android and iOS
+  /// both pick the viewing app from the extension, so a spreadsheet written to
+  /// disk as ".jpg" - which is what happened before, because the name was
+  /// built from isPdf alone - is a file nothing on the phone will open.
+  String get fileExtension => switch (contentType) {
+        'application/pdf' => '.pdf',
+        'image/png' => '.png',
+        'image/webp' => '.webp',
+        'image/heic' || 'image/heif' => '.heic',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => '.docx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => '.xlsx',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => '.pptx',
+        'application/msword' => '.doc',
+        'application/vnd.ms-excel' => '.xls',
+        'application/vnd.ms-powerpoint' => '.ppt',
+        'text/csv' => '.csv',
+        'text/plain' => '.txt',
+        _ => '.jpg',
+      };
+
+  /// What KIND of document this is, for choosing an icon. Grouped rather than
+  /// one case per type: the list only ever needs to say "a spreadsheet", and
+  /// enumerating nine content types at the call site would put the mapping in
+  /// the widget instead of on the model.
+  DocumentKind get kind => switch (contentType) {
+        'application/pdf' => DocumentKind.pdf,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        'application/msword' =>
+          DocumentKind.word,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        'application/vnd.ms-excel' ||
+        'text/csv' =>
+          DocumentKind.sheet,
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+        'application/vnd.ms-powerpoint' =>
+          DocumentKind.slides,
+        'text/plain' => DocumentKind.text,
+        _ => DocumentKind.image,
+      };
+
   /// "Yours", "Your flat" or the building name - so the customer can tell their
   /// own agreement from a notice sent to the whole tower.
   final String scopeLabel;
@@ -104,7 +146,7 @@ class DocumentRepository {
 
       final dir = await getTemporaryDirectory();
       final safe = document.title.replaceAll(RegExp(r'[^A-Za-z0-9 ._-]'), '_');
-      final file = File('${dir.path}/$safe${document.isPdf ? '.pdf' : '.jpg'}');
+      final file = File('${dir.path}/$safe${document.fileExtension}');
 
       await file.writeAsBytes(response.data ?? const []);
       return file;
@@ -129,3 +171,6 @@ final documentRepositoryProvider =
 
 final documentsProvider =
     FutureProvider<List<CustomerDocument>>((ref) => ref.watch(documentRepositoryProvider).list());
+
+/// The document kinds the list shows a distinct icon for.
+enum DocumentKind { pdf, word, sheet, slides, text, image }

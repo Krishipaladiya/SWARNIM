@@ -14,8 +14,16 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<!--
+		Both names matter and they are used in different places. iOS shows
+		CFBundleDisplayName under the home-screen icon, but falls back to
+		CFBundleName - which Flutter generated from the package name as
+		"swarnim_connect" - in Settings, in the app switcher on some versions,
+		and anywhere the display name is missing. Leaving them out of step is
+		how an app ends up called two different things on one phone.
+	-->
 	<key>CFBundleName</key>
-	<string>swarnim_connect</string>
+	<string>Swarnim Connect</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

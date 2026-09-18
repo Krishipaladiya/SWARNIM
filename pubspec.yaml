@@ -63,7 +63,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/brand/logo.png
-    - assets/brand/splash.gif
+    - assets/brand/splash.webp
 
     # Poppins, BUNDLED rather than fetched.
     #

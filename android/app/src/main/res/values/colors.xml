@@ -10,5 +10,5 @@
          bluer field. The native launch screen uses this so that the handover
          to the Dart screen, where the film starts playing, is a change of
          content and not a change of colour. -->
-    <color name="swarnim_splash">#244855</color>
+    <color name="swarnim_splash">#0D2031</color>
 </resources>

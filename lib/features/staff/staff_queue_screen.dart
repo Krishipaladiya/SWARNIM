@@ -55,6 +55,11 @@ class _StaffQueueScreenState extends ConsumerState<StaffQueueScreen> {
     final queue = ref.watch(staffQueueProvider);
 
     return SwarnimScreen(
+      // Pull down to reload. No refresh button: the gesture is
+      // the affordance every phone user already has.
+      onRefresh: () async {
+        ref.invalidate(staffQueueProvider);
+      },
       title: 'Work Queue',
       subtitle: queue.maybeWhen(
         data: (p) => '${p.total} complaint${p.total == 1 ? "" : "s"}',

@@ -79,6 +79,7 @@ class SwarnimScreen extends StatelessWidget {
     this.trailing,
     required this.child,
     this.padding = const EdgeInsets.fromLTRB(24, 20, 24, 24),
+    this.onRefresh,
   });
 
   final String title;
@@ -91,6 +92,20 @@ class SwarnimScreen extends StatelessWidget {
   final Widget? trailing;
   final Widget child;
   final EdgeInsets padding;
+
+  /// Pull down to reload. Supplying this is all a screen has to do.
+  ///
+  /// Here rather than on each screen for the obvious reason - five screens
+  /// each building their own RefreshIndicator is five chances to use a
+  /// different spinner colour or forget the scroll physics - and for a less
+  /// obvious one: the gesture only works if the scroll view is scrollable even
+  /// when the content is short, and that is a property of the scroll view this
+  /// widget owns, not of the screen's content.
+  ///
+  /// There is deliberately no refresh BUTTON anywhere in the app. A button
+  /// costs a permanent piece of the toolbar to do what the surface itself can
+  /// do on a gesture every phone user already knows.
+  final Future<void> Function()? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -163,12 +178,36 @@ class SwarnimScreen extends StatelessWidget {
                 decoration: const BoxDecoration(
                   gradient: SwarnimColors.bodyGradient,
                 ),
-                child: SingleChildScrollView(padding: padding, child: child),
+                child: _scroller(),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _scroller() {
+    // AlwaysScrollable, not the default. Without it a screen whose content
+    // fits - Profile on a tall phone, an empty complaint list - has nothing
+    // to overscroll, so the pull gesture never fires and refresh appears
+    // broken on exactly the screens with least on them. It also gives iOS its
+    // rubber-band stretch, which is what the gesture reads as there.
+    final view = SingleChildScrollView(
+      physics: onRefresh == null ? null : const AlwaysScrollableScrollPhysics(),
+      padding: padding,
+      child: child,
+    );
+
+    if (onRefresh == null) return view;
+
+    // .adaptive so iOS gets its own pull-to-refresh spinner rather than the
+    // Material arrow, which looks borrowed on that platform.
+    return RefreshIndicator.adaptive(
+      onRefresh: onRefresh!,
+      color: SwarnimColors.navy,
+      backgroundColor: Colors.white,
+      child: view,
     );
   }
 }

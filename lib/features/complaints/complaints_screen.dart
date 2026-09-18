@@ -26,6 +26,9 @@ class ComplaintsScreen extends ConsumerWidget {
     return Stack(
       children: [
         SwarnimScreen(
+          // Pull down to reload. No refresh button: the gesture is the
+          // affordance every phone user already has.
+          onRefresh: () async => ref.invalidate(myComplaintsProvider),
           title: 'My Complaints',
           subtitle: complaints.maybeWhen(
             data: (list) =>

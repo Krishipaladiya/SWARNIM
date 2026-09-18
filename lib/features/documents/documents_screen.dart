@@ -114,7 +114,16 @@ class _DocumentCardState extends ConsumerState<_DocumentCard> {
       // A phone with no PDF reader is a real situation on a cheap handset, and
       // "nothing happened" is the worst possible answer.
       if (result.type != ResultType.done && mounted) {
-        _say('No app on this phone can open that file.', bad: true);
+        // Names the kind, because "no app can open that" is unactionable
+        // while "install a spreadsheet app" is something a person can do.
+        final what = switch (widget.document.kind) {
+          DocumentKind.pdf => 'a PDF reader',
+          DocumentKind.word => 'an app that opens Word documents',
+          DocumentKind.sheet => 'an app that opens spreadsheets',
+          DocumentKind.slides => 'an app that opens presentations',
+          _ => 'an app that opens this kind of file',
+        };
+        _say('This phone has no $what installed.', bad: true);
       }
     } on ApiException catch (e) {
       if (mounted) _say(e.message, bad: true);
@@ -185,7 +194,14 @@ class _DocumentCardState extends ConsumerState<_DocumentCard> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(d.isPdf ? Icons.picture_as_pdf_outlined : Icons.image_outlined,
+              Icon(switch (d.kind) {
+                DocumentKind.pdf => Icons.picture_as_pdf_outlined,
+                DocumentKind.word => Icons.description_outlined,
+                DocumentKind.sheet => Icons.table_chart_outlined,
+                DocumentKind.slides => Icons.slideshow_outlined,
+                DocumentKind.text => Icons.notes_outlined,
+                DocumentKind.image => Icons.image_outlined,
+              },
                   size: 20, color: SwarnimColors.metaOnLight),
               const SizedBox(width: 10),
               Expanded(

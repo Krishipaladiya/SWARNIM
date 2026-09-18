@@ -18,6 +18,11 @@ class AccountScreen extends ConsumerWidget {
     final dashboard = ref.watch(dashboardProvider);
 
     return SwarnimScreen(
+      // Pull down to reload. No refresh button: the gesture is
+      // the affordance every phone user already has.
+      onRefresh: () async {
+        ref.invalidate(dashboardProvider);
+      },
       title: 'My Profile',
       child: dashboard.when(
         loading: () => const Padding(

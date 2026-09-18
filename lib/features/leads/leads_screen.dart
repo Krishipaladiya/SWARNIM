@@ -53,6 +53,11 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen> {
     final leads = ref.watch(leadsProvider);
 
     return SwarnimScreen(
+      // Pull down to reload. No refresh button: the gesture is
+      // the affordance every phone user already has.
+      onRefresh: () async {
+        ref.invalidate(leadsProvider);
+      },
       title: 'Leads',
       subtitle: leads.maybeWhen(
         data: (p) => '${p.total} ${p.total == 1 ? "person" : "people"}',
