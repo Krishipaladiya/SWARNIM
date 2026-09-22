@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
+import '../../core/complaints.dart';
+import '../../core/documents.dart';
+import '../../core/projects.dart';
+import '../../core/staff.dart';
+import '../../core/unit.dart';
 
 /// Navy bottom bar from the mockup: four icons, the active one at full opacity
 /// and the rest at 40%.
@@ -9,7 +15,7 @@ import '../../app/theme.dart';
 /// The mockup uses bitmap icons (home.png, report.png, approve.png, user.png).
 /// Until those assets are supplied, these are the closest Material equivalents -
 /// swapping them later is a one-line change per tab.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell, this.staff = false});
 
   final StatefulNavigationShell shell;
@@ -19,6 +25,37 @@ class AppShell extends StatelessWidget {
   /// makes the two experiences feel like different apps rather than one app
   /// with things hidden.
   final bool staff;
+
+  /// Reloads the data behind the tab being opened.
+  ///
+  /// Listed per tab rather than invalidating everything: a blanket refresh
+  /// would re-fetch the documents list every time somebody looked at their
+  /// profile, on a connection that may be a phone in a lift.
+  void _refreshTab(WidgetRef ref, int index) {
+    if (staff) {
+      switch (index) {
+        case 0:
+          ref.invalidate(staffCountsProvider);
+        case 1:
+          ref.invalidate(staffQueueProvider);
+        case 3:
+          ref.invalidate(staffCountsProvider);
+      }
+      return;
+    }
+
+    switch (index) {
+      case 0:
+        ref.invalidate(dashboardProvider);
+        ref.invalidate(appSliderProvider);
+      case 1:
+        ref.invalidate(myComplaintsProvider);
+      case 2:
+        ref.invalidate(documentsProvider);
+      case 3:
+        ref.invalidate(dashboardProvider);
+    }
+  }
 
   static const _customerTabs = <({IconData icon, String label})>[
     (icon: Icons.home_outlined, label: 'Home'),
@@ -37,7 +74,7 @@ class AppShell extends StatelessWidget {
   List<({IconData icon, String label})> get _tabs => staff ? _staffTabs : _customerTabs;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       // Stated rather than inherited. This is the one scaffold whose colour is
       // actually seen - the branch screens do not extend under the bottom
@@ -65,7 +102,23 @@ class AppShell extends StatelessWidget {
                     // goBranch with initialLocation resets a tab to its root
                     // when you tap the tab you are already on - the behaviour
                     // people expect from every other app on their phone.
-                    onTap: () => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+                    onTap: () {
+                      // Moving to a tab reloads what that tab shows.
+                      //
+                      // A StatefulShellRoute keeps each branch alive, which is
+                      // what makes tabs feel instant - and also means a screen
+                      // built ten minutes ago is still on screen, showing a
+                      // complaint count from before the complaint was filed.
+                      // Invalidating on the way in costs one request and makes
+                      // the tab always current.
+                      //
+                      // Only on a CHANGE of tab. Doing it when somebody taps
+                      // the tab they are already on would refetch on every
+                      // stray tap of the bar.
+                      if (i != shell.currentIndex) _refreshTab(ref, i);
+
+                      shell.goBranch(i, initialLocation: i == shell.currentIndex);
+                    },
                   ),
               ],
             ),

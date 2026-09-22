@@ -46,10 +46,47 @@ class ProjectShowcase {
       );
 }
 
+/// A slide on the app's home screen, curated in Admin Central.
+///
+/// Deliberately not a [ProjectSlide]. A project photograph documents a
+/// building; this is an announcement aimed at residents, and while the two
+/// shared a source the banner on every home screen changed whenever somebody
+/// uploaded a tower photo.
+class AppSlide {
+  AppSlide({required this.id, required this.imageUrl, this.caption, this.linkUrl});
+
+  final String id;
+
+  /// Path relative to the API host. Needs a token, so this is the signed-in
+  /// screen only - the login screen keeps the public project showcase.
+  final String imageUrl;
+  final String? caption;
+  final String? linkUrl;
+
+  factory AppSlide.fromJson(Map<String, dynamic> json) => AppSlide(
+        id: json['id'] as String,
+        imageUrl: json['imageUrl'] as String? ?? '',
+        caption: json['caption'] as String?,
+        linkUrl: json['linkUrl'] as String?,
+      );
+}
+
 class ProjectRepository {
   ProjectRepository(this._dio);
 
   final Dio _dio;
+
+  /// The home slider. Its own endpoint, unrelated to projects.
+  Future<List<AppSlide>> slider() async {
+    try {
+      final response = await _dio.get('/api/v1/slider');
+      return (response.data as List)
+          .map((e) => AppSlide.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.from(e);
+    }
+  }
 
   Future<List<ProjectShowcase>> showcase({required bool signedIn}) async {
     try {
@@ -67,6 +104,12 @@ final projectRepositoryProvider =
     Provider<ProjectRepository>((ref) => ProjectRepository(ref.watch(dioProvider)));
 
 /// The login screen's slider. Public images only, and no token is sent.
+/// The home screen's slider. Separate from the project showcase, so adding a
+/// banner does not touch project photography and vice versa.
+final appSliderProvider = FutureProvider<List<AppSlide>>(
+  (ref) => ref.watch(projectRepositoryProvider).slider(),
+);
+
 final publicShowcaseProvider = FutureProvider<List<ProjectShowcase>>(
   (ref) => ref.watch(projectRepositoryProvider).showcase(signedIn: false),
 );

@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -113,9 +116,14 @@ class StaffComplaintScreen extends ConsumerWidget {
                   Text('Customer', style: SwarnimTheme.cardTitle),
                   const SizedBox(height: 6),
                   _Row('Name', d.row.customerName),
-                  _Row('Unit', d.row.unitLabel),
-                  _Row('Prefers', d.slotLabel),
                   if (d.customerMobile != null) _Row('Mobile', d.customerMobile!),
+                  _Row('Flat', d.row.unitLabel),
+                  _Row('Project', d.row.projectName),
+                  if (d.row.location != null && d.row.location!.isNotEmpty)
+                    _Row('Where', d.row.location!),
+                  _Row('Prefers', d.slotLabel),
+                  if (d.reopenCount > 0)
+                    _Row('Reopened', '${d.reopenCount} time(s)'),
                 ],
               ),
             ),
@@ -129,10 +137,10 @@ class StaffComplaintScreen extends ConsumerWidget {
                       fontSize: 13, height: 1.5, color: SwarnimColors.inkOnLight)),
             ],
 
-            if (d.attachmentCount > 0) ...[
-              const FieldLabel('Customer photos', topGap: 16),
-              Text('${d.attachmentCount} attached · open the complaint in Admin Central to review',
-                  style: SwarnimTheme.cardMeta),
+            if (d.files.isNotEmpty) ...[
+              const FieldLabel('Photos & video', topGap: 16),
+              const SizedBox(height: 8),
+              _Evidence(files: d.files),
             ],
 
             // --- actions --------------------------------------------------
@@ -500,4 +508,82 @@ class _Back extends StatelessWidget {
           child: Icon(Icons.arrow_back, size: 22, color: SwarnimColors.inkOnDark),
         ),
       );
+}
+
+/// The complaint's photographs, in a row that scrolls sideways.
+///
+/// Tiles rather than one image per row: an engineer is deciding whether to
+/// take a ladder, not studying a gallery, and four thumbnails on one screen
+/// answer that faster than four full-width pictures on four.
+///
+/// Video is a tile with a play mark rather than an inline player. Phone video
+/// arrives as .mov, which Android cannot decode - an inline player would be a
+/// black rectangle with dead controls, which is exactly what it was on the web
+/// before that was fixed.
+class _Evidence extends ConsumerWidget {
+  const _Evidence({required this.files});
+
+  final List<StaffFile> files;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dio = ref.read(dioProvider);
+
+    return SizedBox(
+      height: 104,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: files.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final f = files[i];
+
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(SwarnimRadius.image),
+            child: Container(
+              width: 104,
+              color: SwarnimColors.navyMid,
+              child: f.isVideo
+                  ? const Center(
+                      child: Icon(Icons.play_circle_outline,
+                          size: 34, color: SwarnimColors.inkOnDark),
+                    )
+                  // The image needs the bearer token, so it is fetched through
+                  // Dio rather than by Image.network, which sends no headers
+                  // and would get a 401 for every tile.
+                  : FutureBuilder<Response<List<int>>>(
+                      future: dio.get<List<int>>(
+                        f.url,
+                        options: Options(responseType: ResponseType.bytes),
+                      ),
+                      builder: (context, snap) {
+                        if (snap.hasData && snap.data?.data != null) {
+                          return Image.memory(
+                            Uint8List.fromList(snap.data!.data!),
+                            fit: BoxFit.cover,
+                            width: 104,
+                            height: 104,
+                          );
+                        }
+                        if (snap.hasError) {
+                          return const Center(
+                            child: Icon(Icons.broken_image_outlined,
+                                color: SwarnimColors.metaOnDark),
+                          );
+                        }
+                        return const Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

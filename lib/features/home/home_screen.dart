@@ -49,8 +49,6 @@ class HomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (!d.isUnderMaintenance) _CoverEnded(endsOn: d.maintenanceEndsOn),
-
               if (d.progressPercent > 0) ...[
                 const FieldLabel('Construction Progress'),
                 _Progress(percent: d.progressPercent, note: d.progressNote),
@@ -94,12 +92,12 @@ class HomeScreen extends ConsumerWidget {
                     child: SecondaryButton(
                       label: 'File Complaint',
                       icon: Icons.edit_note_outlined,
-                      // Hidden rather than allowed-then-rejected: the server
-                      // refuses it anyway, and a dead button is kinder than an
-                      // error after typing out a problem.
-                      onPressed: d.isUnderMaintenance
-                          ? () => context.push('/complaints/new')
-                          : null,
+                      // Always available. This used to be disabled outside
+                      // the builder's maintenance window, because the server
+                      // refused the complaint anyway. Maintenance cover has
+                      // been withdrawn from the product and that server rule
+                      // went with it, so there is nothing left to gate on.
+                      onPressed: () => context.push('/complaints/new'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -113,13 +111,6 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
 
-              if (d.isUnderMaintenance && d.maintenanceDaysRemaining != null) ...[
-                const SizedBox(height: 12),
-                _CoverBanner(
-                  endsOn: d.maintenanceEndsOn!,
-                  daysRemaining: d.maintenanceDaysRemaining!,
-                ),
-              ],
 
               const SizedBox(height: 20),
               const _ProjectSlide(),
@@ -185,74 +176,7 @@ class _Progress extends StatelessWidget {
   }
 }
 
-class _CoverBanner extends StatelessWidget {
-  const _CoverBanner({required this.endsOn, required this.daysRemaining});
 
-  final DateTime endsOn;
-  final int daysRemaining;
-
-  @override
-  Widget build(BuildContext context) {
-    final soon = daysRemaining <= 90;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: (soon ? SwarnimColors.goldSoft : SwarnimColors.metaOnLight)
-            .withValues(alpha: 0.12),
-        border: Border(
-          left: BorderSide(
-            color: soon ? SwarnimColors.goldSoft : SwarnimColors.borderLight,
-            width: 3,
-          ),
-        ),
-        borderRadius: BorderRadius.circular(SwarnimRadius.control),
-      ),
-      child: Text(
-        soon
-            ? 'Maintenance cover ends on ${DateFormat('d MMM yyyy').format(endsOn)} '
-                '— $daysRemaining days left.'
-            : 'Maintenance cover runs to ${DateFormat('d MMM yyyy').format(endsOn)}.',
-        style: GoogleFonts.poppins(
-            fontSize: 12, height: 1.4, color: SwarnimColors.inkOnLight),
-      ),
-    );
-  }
-}
-
-class _CoverEnded extends StatelessWidget {
-  const _CoverEnded({this.endsOn});
-
-  final DateTime? endsOn;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: SwarnimColors.statusOpen.withValues(alpha: 0.08),
-        border: const Border(
-            left: BorderSide(color: SwarnimColors.statusOpen, width: 3)),
-        borderRadius: BorderRadius.circular(SwarnimRadius.control),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Maintenance cover has ended', style: SwarnimTheme.cardTitle),
-          const SizedBox(height: 4),
-          Text(
-            endsOn == null
-                ? 'New complaints cannot be filed. Please contact the site office.'
-                : 'Cover ended on ${DateFormat('d MMM yyyy').format(endsOn!)}. '
-                    'Please contact the site office to arrange chargeable work.',
-            style: SwarnimTheme.cardMeta,
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _Empty extends StatelessWidget {
   const _Empty({required this.underMaintenance});
@@ -327,13 +251,18 @@ class _ProjectSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Signed in, so this includes photographs the builder chose to keep off the
-    // login screen. Heading and divider are handed to the slider rather than
-    // drawn here: it renders nothing when there are no photographs, and a
-    // heading left outside it showed "OUR PROJECTS" over an empty gap.
+    // The curated slider, maintained in Admin Central under "App slider" -
+    // not project photographs. Those document buildings; this is whatever the
+    // office wants residents to see when they open the app, and while the two
+    // shared a source neither could change without moving the other.
+    //
+    // Heading and divider are handed to the slider rather than drawn here: it
+    // renders nothing when there are no slides, and a heading left outside it
+    // showed a label over an empty gap.
     return const ProjectSlider(
       signedIn: true,
-      heading: 'OUR PROJECTS',
+      curated: true,
+      heading: 'FROM SWARNIM',
       leadIn: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -44,10 +44,15 @@ class UnitDashboard {
   /// "SWH-A-1203" style label built from the parts the API returns.
   String get unitLabel => loginId.isNotEmpty ? loginId : unitNumber;
 
+  /// Tower and floor only.
+  ///
+  /// The flat type - 2BHK and so on - used to be appended here. It is hidden
+  /// across the product now, so the field is still parsed (the API sends it,
+  /// and dropping it from the model would only move the change) but nothing
+  /// displays it.
   String get locationLine => [
         buildingName,
         if (floorNumber != null) 'Floor $floorNumber',
-        if (unitType != null && unitType!.isNotEmpty) unitType!,
       ].join(', ');
 
   factory UnitDashboard.fromJson(Map<String, dynamic> json) => UnitDashboard(

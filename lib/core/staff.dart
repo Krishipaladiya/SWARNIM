@@ -151,11 +151,40 @@ class StaffEvent {
       );
 }
 
+/// A photograph or video on a complaint, as staff see it.
+class StaffFile {
+  StaffFile({
+    required this.id,
+    required this.url,
+    required this.contentType,
+    required this.isVideo,
+    this.caption,
+  });
+
+  final String id;
+
+  /// Relative to the API host and needs the caller's token, so it is fetched
+  /// with the Dio client rather than handed straight to Image.network.
+  final String url;
+  final String contentType;
+  final bool isVideo;
+  final String? caption;
+
+  factory StaffFile.fromJson(Map<String, dynamic> json) => StaffFile(
+        id: json['id'] as String,
+        url: json['url'] as String? ?? '',
+        contentType: json['contentType'] as String? ?? '',
+        isVideo: json['isVideo'] as bool? ?? false,
+        caption: json['caption'] as String?,
+      );
+}
+
 class StaffComplaintDetail {
   StaffComplaintDetail({
     required this.row,
     required this.preferredSlot,
     required this.attachmentCount,
+    this.files = const [],
     required this.reopenCount,
     required this.timeline,
     required this.nextStatuses,
@@ -168,6 +197,10 @@ class StaffComplaintDetail {
   final String? customerMobile;
   final int preferredSlot;
   final int attachmentCount;
+
+  /// The evidence itself. Used to be a count only, which sent the engineer to
+  /// a desktop to look at the photographs of the flat they were standing in.
+  final List<StaffFile> files;
   final int reopenCount;
   final List<StaffEvent> timeline;
 
@@ -187,6 +220,9 @@ class StaffComplaintDetail {
         customerMobile: json['customerMobile'] as String?,
         preferredSlot: json['preferredSlot'] as int? ?? 0,
         attachmentCount: json['attachmentCount'] as int? ?? 0,
+        files: ((json['files'] as List?) ?? const [])
+            .map((e) => StaffFile.fromJson(e as Map<String, dynamic>))
+            .toList(),
         reopenCount: json['reopenCount'] as int? ?? 0,
         timeline: ((json['timeline'] as List?) ?? [])
             .map((e) => StaffEvent.fromJson(e as Map<String, dynamic>))

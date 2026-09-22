@@ -14,6 +14,14 @@ import '../../core/projects.dart';
 /// One widget for both because the only real difference is which endpoint the
 /// images come from - and that difference is a single flag. Two near-identical
 /// carousels would drift apart the first time either was touched.
+/// One item on screen, whichever list it came from.
+///
+/// The widget draws this, not a project and not a slide. Adding the curated
+/// home slider as a second source was then a matter of mapping it into this
+/// shape, rather than a second copy of the page view, the auto-play timer and
+/// the dots - which would have been two carousels to keep in step.
+typedef SliderItem = ({String url, String? caption, String? title, String? subtitle});
+
 class ProjectSlider extends ConsumerStatefulWidget {
   const ProjectSlider({
     super.key,
@@ -22,6 +30,7 @@ class ProjectSlider extends ConsumerStatefulWidget {
     this.height = 200,
     this.heading,
     this.leadIn,
+    this.curated = false,
   });
 
   /// The section label, e.g. "OUR PROJECTS".
@@ -46,6 +55,12 @@ class ProjectSlider extends ConsumerStatefulWidget {
   final bool onDark;
 
   final double height;
+
+  /// Draw the curated home slider instead of project photographs.
+  ///
+  /// The login screen cannot use it: /api/v1/slider needs a token, and the
+  /// public showcase exists precisely for the screen where nobody has one.
+  final bool curated;
 
   @override
   ConsumerState<ProjectSlider> createState() => _ProjectSliderState();
@@ -87,21 +102,27 @@ class _ProjectSliderState extends ConsumerState<ProjectSlider> {
 
   @override
   Widget build(BuildContext context) {
-    final showcase =
-        ref.watch(widget.signedIn ? customerShowcaseProvider : publicShowcaseProvider);
+    // Both sources resolve to List<SliderItem>, so everything below this line
+    // is the same code for either.
+    final AsyncValue<List<SliderItem>> source = widget.curated
+        ? ref.watch(appSliderProvider).whenData((slides) => [
+              for (final s in slides)
+                (url: s.imageUrl, caption: s.caption, title: null, subtitle: null),
+            ])
+        : ref.watch(widget.signedIn ? customerShowcaseProvider : publicShowcaseProvider)
+            .whenData((projects) => [
+                  for (final p in projects)
+                    for (final sl in p.slides)
+                      (url: sl.imageUrl, caption: sl.caption, title: p.name, subtitle: p.tagline),
+                ]);
 
-    return showcase.when(
+    return source.when(
       // Nothing at all while loading or on error. A broken frame on the login
       // screen is worse than no frame, and the slider is decoration - it must
       // never be the reason someone cannot sign in.
       loading: () => SizedBox(height: widget.height),
       error: (_, _) => const SizedBox.shrink(),
-      data: (projects) {
-        final slides = [
-          for (final p in projects)
-            for (final s in p.slides) (project: p, slide: s),
-        ];
-
+      data: (slides) {
         if (slides.isEmpty) return const SizedBox.shrink();
 
         WidgetsBinding.instance.addPostFrameCallback((_) => _startAutoPlay(slides.length));
@@ -134,8 +155,8 @@ class _ProjectSliderState extends ConsumerState<ProjectSlider> {
                   itemCount: slides.length,
                   onPageChanged: (i) => setState(() => _index = i),
                   itemBuilder: (context, i) => _Slide(
-                    url: slides[i].slide.imageUrl,
-                    caption: slides[i].slide.caption,
+                    url: slides[i].url,
+                    caption: slides[i].caption,
                     signedIn: widget.signedIn,
                   ),
                 ),
@@ -165,18 +186,23 @@ class _ProjectSliderState extends ConsumerState<ProjectSlider> {
               ),
             ],
 
-            const SizedBox(height: 10),
-            Text(
-              slides[_index.clamp(0, slides.length - 1)].project.name,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: titleColour,
+            // A curated slide carries no title: it is a banner, not a
+            // building, and an empty line under it would leave the dots
+            // floating away from the image.
+            if (slides[_index.clamp(0, slides.length - 1)].title case final title?) ...[
+              const SizedBox(height: 10),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: titleColour,
+                ),
               ),
-            ),
+            ],
 
-            if (slides[_index.clamp(0, slides.length - 1)].project.tagline
+            if (slides[_index.clamp(0, slides.length - 1)].subtitle
                 case final tagline?) ...[
               const SizedBox(height: 2),
               Text(
