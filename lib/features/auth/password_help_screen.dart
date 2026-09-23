@@ -71,7 +71,8 @@ class PasswordHelpScreen extends ConsumerWidget {
 
               const SizedBox(height: 28),
               Text(
-                'Have your unit ID ready — it is on your allotment letter. '
+                'Have your username ready — residents use the unit ID on the '
+                'allotment letter, and staff sign in with their mobile number. '
                 'The office will confirm who you are before issuing a password.',
                 style: GoogleFonts.poppins(
                   fontSize: 12,

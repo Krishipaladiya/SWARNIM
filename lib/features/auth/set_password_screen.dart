@@ -158,9 +158,14 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
                           ? 'Tell us who you are and choose a password. The one '
                               'on your allotment letter is known to the site '
                               'office, so it should not stay your password.'
-                          : 'The password on your allotment letter was created '
-                              'for you and is known to the site office. Set one '
-                              'only you know.',
+                          // Staff land here as well as residents - a site
+                          // engineer has no allotment letter - so this branch
+                          // names no document. The needsDetails branch above
+                          // is only ever a resident claiming their flat, and
+                          // keeps the letter.
+                          : 'The password you were given was created for you '
+                              'and is known to the site office. Set one only '
+                              'you know.',
                   style: GoogleFonts.poppins(
                     fontSize: 12.5,
                     height: 1.5,
@@ -312,7 +317,7 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
                 if (forced) ...[
                 const SizedBox(height: 18),
                 Text(
-                  'Forgotten the letter? Sign out and ask the site office for a '
+                  'Forgotten it? Sign out and ask the site office for a '
                   'new password.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(

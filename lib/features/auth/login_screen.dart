@@ -75,12 +75,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Labelled for the customer, who is almost everybody signing in
                 // and always signs in with a unit ID.
                 //
-                // Staff type their work email into this same box and it still
-                // works - the server decides what an identifier is and routes on
-                // the answer. Naming both here made every resident read a second
-                // option that was never theirs, so the label names the common
-                // case and the rare one simply keeps working.
-                Text('Unit ID', style: SwarnimTheme.fieldLabelDark),
+                // "Username", not "Unit ID" and not "Email".
+                //
+                // One box takes all three kinds of sign-in - a resident's unit
+                // id, a staff mobile number, a staff email - because the server
+                // decides what an identifier is and routes on the answer.
+                // Labelling it "Unit ID" told staff they were on the wrong
+                // screen, and labelling it "Email" told residents the same. The
+                // neutral word is the only one true for everybody who signs in.
+                Text('Username', style: SwarnimTheme.fieldLabelDark),
                 const SizedBox(height: 8),
                 DarkField(
                   controller: _loginId,
@@ -93,7 +96,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   inputFormatters: const [UpperCaseUnitIdFormatter()],
                   autofillHints: const [AutofillHints.username],
                   validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Enter the unit ID from your allotment letter'
+                      ? 'Enter your username'
                       : null,
                 ),
 

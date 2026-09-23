@@ -1,0 +1,49 @@
+# =============================================================================
+# fastlane deliver — App Store screenshots only
+# -----------------------------------------------------------------------------
+# WHAT THIS IS FOR
+#
+# Screenshots are NOT part of the .ipa. They are App Store Connect metadata,
+# uploaded separately from the binary, and they are what the store page shows
+# before anybody installs anything. This file is what lets a build upload them
+# instead of somebody dragging PNGs into a browser for two device sizes every
+# release.
+#
+# WHY EVERYTHING ELSE IS SWITCHED OFF
+#
+# deliver's default is to upload the whole listing - description, keywords,
+# pricing, the binary. Run with those defaults from CI and it will happily
+# overwrite the copy somebody wrote in App Store Connect with whatever is (or
+# is not) in this repo. Only screenshots are enabled here, and every other
+# channel is explicitly off.
+# =============================================================================
+
+app_identifier "in.cloudverve.swarnim"
+
+# Where the images are. deliver decides which App Store slot each one belongs
+# in FROM ITS PIXEL SIZE, which is why the capture runs on an iPhone 16 Pro Max
+# (1320x2868) and an iPad Pro 13" (2064x2752) simulator: those are already two
+# of the sizes Apple accepts, so nothing is ever resized. A resized screenshot
+# is a rejected screenshot.
+screenshots_path "./fastlane/screenshots"
+
+# Screenshots, and nothing else.
+skip_binary_upload true
+skip_metadata true
+skip_app_version_update true
+skip_screenshots false
+
+# Replace the set rather than add to it, so a screen that was removed from the
+# app does not linger on the store page forever.
+overwrite_screenshots true
+
+# Never put a build in front of a reviewer from a screenshot job. Submission
+# stays a deliberate act in App Store Connect.
+submit_for_review false
+force true          # no interactive HTML preview - there is no terminal in CI
+precheck_include_in_app_purchases false
+
+# The run should fail loudly if a size is missing, rather than quietly
+# publishing a listing with no iPad screenshots on an app that supports iPad
+# (TARGETED_DEVICE_FAMILY = "1,2").
+run_precheck_before_submit false
