@@ -106,8 +106,9 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
+              // The Due chip is gone. The list no longer opens on a
+              // filtered view, so there is nothing to switch back from.
               for (final (scope, label) in const [
-                (LeadScope.due, 'Due'),
                 (LeadScope.mine, 'Mine'),
                 (LeadScope.all, 'Everyone'),
               ]) ...[
@@ -128,12 +129,10 @@ class _LeadsScreenState extends ConsumerState<LeadsScreen> {
             error: (e, _) => StaffAsyncBody.error(e, () => ref.invalidate(leadsProvider)),
             data: (page) => page.items.isEmpty
                 ? StaffAsyncBody.empty(
-                    filter.scope == LeadScope.due ? 'Nothing due' : 'No leads',
+                    'No leads',
                     filter.search.isNotEmpty
                         ? 'Nothing matches "${filter.search}".'
-                        : filter.scope == LeadScope.due
-                            ? 'No follow-ups are owed today. Tap + to add an enquiry.'
-                            : 'Tap + to add the first enquiry.')
+                        : 'Tap + to add the first enquiry.')
                 : Column(
                     children: [
                       for (final lead in page.items)

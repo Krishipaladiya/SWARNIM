@@ -109,7 +109,11 @@ class _StaffQueueScreenState extends ConsumerState<StaffQueueScreen> {
 
           SwarnimScrollRow(
             children: [
-                for (final scope in QueueScope.values) ...[
+                // My team is not offered. Teams are switched off, so it
+                // returned exactly what Mine returns and read as a
+                // filter that did nothing.
+                for (final scope in QueueScope.values)
+                  if (scope != QueueScope.myTeams) ...[
                   _Chip(
                     label: scope.label,
                     selected: filter.scope == scope,
@@ -117,15 +121,6 @@ class _StaffQueueScreenState extends ConsumerState<StaffQueueScreen> {
                   ),
                   const SizedBox(width: 8),
                 ],
-                Container(width: 1, color: SwarnimColors.dividerLight),
-                const SizedBox(width: 8),
-                _Chip(
-                  label: filter.openOnly ? 'Open' : 'Closed',
-                  selected: true,
-                  icon: Icons.swap_horiz,
-                  onTap: () =>
-                      ref.read(queueFilterProvider.notifier).setOpenOnly(!filter.openOnly),
-                ),
             ],
           ),
 
@@ -174,13 +169,11 @@ class _Chip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
-    this.icon,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -201,10 +194,6 @@ class _Chip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 13, color: selected ? SwarnimColors.gold : SwarnimColors.metaOnLight),
-                const SizedBox(width: 5),
-              ],
               Text(
                 label,
                 style: GoogleFonts.poppins(

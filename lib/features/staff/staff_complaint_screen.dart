@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -116,7 +117,8 @@ class StaffComplaintScreen extends ConsumerWidget {
                   Text('Customer', style: SwarnimTheme.cardTitle),
                   const SizedBox(height: 6),
                   _Row('Name', d.row.customerName),
-                  if (d.customerMobile != null) _Row('Mobile', d.customerMobile!),
+                  if (d.customerMobile != null)
+                    _Row('Mobile', d.customerMobile!, dial: true),
                   _Row('Flat', d.row.unitLabel),
                   _Row('Project', d.row.projectName),
                   if (d.row.location != null && d.row.location!.isNotEmpty)
@@ -173,6 +175,18 @@ class _Actions extends ConsumerStatefulWidget {
 }
 
 class _ActionsState extends ConsumerState<_Actions> {
+  /// Whether the engineer may ask the customer for a closing code.
+  ///
+  /// Anything from "picked up" onwards. A complaint nobody has taken is not
+  /// finished work, and one already waiting on the customer or closed has no
+  /// code left to ask for.
+  static bool _canFinish(WorkStatus s) => s == WorkStatus.assigned ||
+      s == WorkStatus.acknowledged ||
+      s == WorkStatus.onSite ||
+      s == WorkStatus.inProgress ||
+      s == WorkStatus.partsAwaited ||
+      s == WorkStatus.workDone;
+
   bool _busy = false;
 
   Future<void> _run(Future<String> Function() action) async {
@@ -262,7 +276,6 @@ class _ActionsState extends ConsumerState<_Actions> {
                   final changed = await showStaffUpdateSheet(
                     context,
                     complaintId: widget.complaintId,
-                    nextStatuses: d.nextStatuses,
                   );
                   if (changed == true) {
                     ref.invalidate(staffComplaintProvider(widget.complaintId));
@@ -279,21 +292,26 @@ class _ActionsState extends ConsumerState<_Actions> {
         ),
         const SizedBox(height: 10),
 
-        // Only offered once the work is actually claimed done. Requesting a
-        // customer's code for a job still in progress trains them to hand it
-        // over on request, which is exactly what the control exists to prevent.
+        // Offered as soon as the work has started - see _canFinish.
+        //
+        // It used to require Work done first, so the engineer had to open
+        // the update sheet and set a status before this button would do
+        // anything: two steps for one intention. Picking a job up now
+        // starts it, and this screen is where they say it is finished.
+        // The server does not gate on Work done either - requesting a code
+        // moves the complaint to Awaiting confirmation from wherever it was.
         SecondaryButton(
           label: 'Work finished - ask for the customer\'s code',
           icon: Icons.verified_outlined,
-          onPressed: _busy || d.row.status != WorkStatus.workDone
+          onPressed: _busy || !_canFinish(d.row.status)
               ? null
               : () => context.push('/staff/complaints/${widget.complaintId}/finish'),
         ),
-        if (d.row.status != WorkStatus.workDone)
+        if (!_canFinish(d.row.status))
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'Move the complaint to "Work done" first.',
+              'Pick the complaint up first.',
               style: GoogleFonts.poppins(fontSize: 11, color: SwarnimColors.metaOnLight),
             ),
           ),
@@ -465,10 +483,27 @@ class _Timeline extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row(this.label, this.value);
+  const _Row(this.label, this.value, {this.dial = false});
 
   final String label;
   final String value;
+
+  /// Tap the value to ring it.
+  ///
+  /// Only the customer's mobile sets this. An engineer standing in a
+  /// stairwell reading a number off the screen and typing it into the
+  /// dialler is a transcription error waiting to happen.
+  final bool dial;
+
+
+  /// Hands the number to the phone's dialler, pre-filled but not dialled -
+  /// iOS and Android both stop at the keypad so a tap can never place a
+  /// call by itself.
+  static Future<void> _call(String number) async {
+    final digits = number.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (digits.isEmpty) return;
+    await launchUrl(Uri(scheme: 'tel', path: digits));
+  }
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -478,13 +513,18 @@ class _Row extends StatelessWidget {
           children: [
             Text(label, style: SwarnimTheme.cardMeta),
             Flexible(
-              child: Text(
-                value,
-                textAlign: TextAlign.right,
-                style: GoogleFonts.poppins(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  color: SwarnimColors.inkOnLight,
+              child: GestureDetector(
+                onTap: dial ? () => _call(value) : null,
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: dial ? SwarnimColors.gold : SwarnimColors.inkOnLight,
+                    decoration: dial ? TextDecoration.underline : null,
+                    decorationColor: SwarnimColors.gold,
+                  ),
                 ),
               ),
             ),

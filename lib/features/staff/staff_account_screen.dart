@@ -56,7 +56,7 @@ class StaffAccountScreen extends ConsumerWidget {
                   Text('Your workload', style: SwarnimTheme.cardTitle),
                   const SizedBox(height: 6),
                   _Row('Open on you', '${c.mine}'),
-                  _Row('Overdue in your team', '${c.overdue}'),
+                  _Row('Closed by you', '${c.closed}'),
                   _Row('Waiting to be picked up', '${c.unclaimed}'),
                 ],
               ),

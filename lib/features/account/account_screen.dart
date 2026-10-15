@@ -209,10 +209,15 @@ class AccountScreen extends ConsumerWidget {
     // line carrying a project name has spaces and commas in it, and a hand
     // written mailto: link drops everything after the first unescaped one -
     // which would reach the office naming no flat at all.
-    final mail = Uri(
-      scheme: 'mailto',
-      path: _supportEmail,
-      queryParameters: {'subject': subject, 'body': body},
+    // The query is encoded by hand, NOT with Uri(queryParameters:).
+    //
+    // That constructor encodes a query the way an HTML form does, where a
+    // space becomes '+'. A mail app does not decode '+' back to a space,
+    // so the draft opened full of 'Delete+my+Swarnim+Connect+account' -
+    // subject and body both. encodeComponent uses %20, which they do
+    // decode.
+    final mail = Uri.parse(
+      'mailto:$_supportEmail?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}',
     );
 
     final opened = await launchUrl(mail, mode: LaunchMode.externalApplication);

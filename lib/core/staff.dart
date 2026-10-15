@@ -437,8 +437,11 @@ final staffRepositoryProvider =
 /// The queue filter the staff screens share, so switching tabs and coming back
 /// does not silently reset what the person was looking at.
 class QueueFilter {
+  // Opens on All. The My-team chip is no longer offered - teams are
+  // switched off - so defaulting to it left the list filtered by
+  // something the reader could neither see nor change.
   const QueueFilter({
-    this.scope = QueueScope.myTeams,
+    this.scope = QueueScope.all,
     this.openOnly = true,
     this.search = '',
   });
@@ -478,6 +481,18 @@ final queueFilterProvider =
 
 /// The queue for the current filter. Watching the filter means changing a chip
 /// refetches without any manual plumbing.
+/// The home screen's summary of open work.
+///
+/// Deliberately NOT [staffQueueProvider]: that one follows the Queue
+/// tab's filter, so tapping a tile silently re-filtered the home screen
+/// too, and the default team scope left an administrator - who belongs to
+/// no team - looking at "Nothing open" while seven complaints were waiting.
+///
+/// Scope All, narrowed by the server: an engineer sees their own work and
+/// anything unclaimed, an administrator sees all of it.
+final staffHomeQueueProvider = FutureProvider<StaffQueuePage>((ref) =>
+    ref.watch(staffRepositoryProvider).queue(scope: QueueScope.all, openOnly: true));
+
 final staffQueueProvider = FutureProvider<StaffQueuePage>((ref) {
   final filter = ref.watch(queueFilterProvider);
   return ref.watch(staffRepositoryProvider).queue(
@@ -497,18 +512,22 @@ final assigneesProvider =
 /// Home-screen counts. Three separate calls rather than one summary endpoint:
 /// each is a cheap COUNT the server already computes for paging, and it avoids
 /// inventing an endpoint that would need changing every time a tile does.
-final staffCountsProvider = FutureProvider<({int mine, int unclaimed, int overdue})>((ref) async {
+final staffCountsProvider = FutureProvider<({int mine, int unclaimed, int closed})>((ref) async {
   final repo = ref.watch(staffRepositoryProvider);
 
+  // The third count is CLOSED work, asked for with scope All and
+  // openOnly false. The server scopes it by permission, so the same
+  // call answers two questions: an engineer sees the jobs they closed,
+  // an administrator sees everything the site team closed.
   final results = await Future.wait([
     repo.queue(scope: QueueScope.mine, pageSize: 1),
     repo.queue(scope: QueueScope.unassigned, pageSize: 1),
-    repo.queue(scope: QueueScope.myTeams, pageSize: 100),
+    repo.queue(scope: QueueScope.all, openOnly: false, pageSize: 1),
   ]);
 
   return (
     mine: results[0].total,
     unclaimed: results[1].total,
-    overdue: results[2].items.where((r) => r.isOverdue).length,
+    closed: results[2].total,
   );
 });

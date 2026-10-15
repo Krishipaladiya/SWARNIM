@@ -24,7 +24,7 @@ class StaffHomeScreen extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider);
     final name = auth is SignedIn ? auth.displayName : '';
     final counts = ref.watch(staffCountsProvider);
-    final queue = ref.watch(staffQueueProvider);
+    final queue = ref.watch(staffHomeQueueProvider);
 
     return SwarnimScreen(
       eyebrow: _greeting(),
@@ -33,7 +33,7 @@ class StaffHomeScreen extends ConsumerWidget {
       child: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(staffCountsProvider);
-          ref.invalidate(staffQueueProvider);
+          ref.invalidate(staffHomeQueueProvider);
           ref.invalidate(leadCountsProvider);
         },
         child: Column(
@@ -54,18 +54,24 @@ class StaffHomeScreen extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _Cue(
-                      value: c.overdue,
-                      label: 'Overdue',
-                      alarming: c.overdue > 0,
-                      onTap: () => _openQueue(context, ref, QueueScope.myTeams),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _Cue(
                       value: c.unclaimed,
                       label: 'Unclaimed',
                       onTap: () => _openQueue(context, ref, QueueScope.unassigned),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Closed work, not overdue work.
+                  //
+                  // Opened with scope All and openOnly false, which the
+                  // server narrows by permission: an engineer lands on
+                  // the jobs they closed, an administrator on everything
+                  // the site team closed.
+                  Expanded(
+                    child: _Cue(
+                      value: c.closed,
+                      label: 'Closed',
+                      onTap: () => _openQueue(context, ref, QueueScope.all,
+                          openOnly: false),
                     ),
                   ),
                 ],
@@ -81,11 +87,11 @@ class StaffHomeScreen extends ConsumerWidget {
 
             queue.when(
               loading: StaffAsyncBody.loading,
-              error: (e, _) => StaffAsyncBody.error(e, () => ref.invalidate(staffQueueProvider)),
+              error: (e, _) => StaffAsyncBody.error(e, () => ref.invalidate(staffHomeQueueProvider)),
               data: (page) => page.items.isEmpty
                   ? StaffAsyncBody.empty(
                       'Nothing open',
-                      'No complaints are waiting on your team right now.')
+                      'Nothing is waiting right now.')
                   : Column(
                       children: [
                         // A home screen is a summary, not the queue. Five is
@@ -98,7 +104,7 @@ class StaffHomeScreen extends ConsumerWidget {
                           ),
                         if (page.total > 5)
                           TextButton(
-                            onPressed: () => _openQueue(context, ref, QueueScope.myTeams),
+                            onPressed: () => _openQueue(context, ref, QueueScope.all),
                             child: Text('See all ${page.total}',
                                 style: GoogleFonts.poppins(
                                   fontSize: 12.5,
@@ -117,9 +123,10 @@ class StaffHomeScreen extends ConsumerWidget {
     );
   }
 
-  static void _openQueue(BuildContext context, WidgetRef ref, QueueScope scope) {
+  static void _openQueue(BuildContext context, WidgetRef ref, QueueScope scope,
+      {bool openOnly = true}) {
     ref.read(queueFilterProvider.notifier).setScope(scope);
-    ref.read(queueFilterProvider.notifier).setOpenOnly(true);
+    ref.read(queueFilterProvider.notifier).setOpenOnly(openOnly);
     StatefulNavigationShell.of(context).goBranch(1);
   }
 
@@ -138,17 +145,15 @@ class _Cue extends StatelessWidget {
     required this.value,
     required this.label,
     required this.onTap,
-    this.alarming = false,
   });
 
   final int value;
   final String label;
   final VoidCallback onTap;
-  final bool alarming;
 
   @override
   Widget build(BuildContext context) {
-    final accent = alarming ? SwarnimColors.statusOpen : SwarnimColors.gold;
+    final accent = SwarnimColors.gold;
 
     return Material(
       color: Colors.transparent,
@@ -169,7 +174,7 @@ class _Cue extends StatelessWidget {
                     fontSize: 26,
                     fontWeight: FontWeight.w700,
                     height: 1.1,
-                    color: alarming ? SwarnimColors.statusOpen : SwarnimColors.inkOnLight,
+                    color: SwarnimColors.inkOnLight,
                   )),
               const SizedBox(height: 2),
               Text(label.toUpperCase(),

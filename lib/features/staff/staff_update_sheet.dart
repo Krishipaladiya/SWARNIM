@@ -12,18 +12,16 @@ import 'staff_widgets.dart';
 Future<bool?> showStaffUpdateSheet(
   BuildContext context, {
   required String complaintId,
-  required List<WorkStatus> nextStatuses,
 }) =>
     showSwarnimSheet<bool>(
       context,
-      builder: (_) => _UpdateSheet(complaintId: complaintId, nextStatuses: nextStatuses),
+      builder: (_) => _UpdateSheet(complaintId: complaintId),
     );
 
 class _UpdateSheet extends ConsumerStatefulWidget {
-  const _UpdateSheet({required this.complaintId, required this.nextStatuses});
+  const _UpdateSheet({required this.complaintId});
 
   final String complaintId;
-  final List<WorkStatus> nextStatuses;
 
   @override
   ConsumerState<_UpdateSheet> createState() => _UpdateSheetState();
@@ -32,8 +30,6 @@ class _UpdateSheet extends ConsumerStatefulWidget {
 class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
   final _note = TextEditingController();
   final _parts = TextEditingController();
-
-  WorkStatus? _status;
 
   /// Off by default, and that default is load-bearing. Notes get written for
   /// colleagues - "tenant was hostile", "quote is inflated" - and a box that
@@ -52,8 +48,11 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
   }
 
   Future<void> _save() async {
-    if (_status == null && _note.text.trim().isEmpty && _parts.text.trim().isEmpty) {
-      setState(() => _error = 'Add a note or change the status.');
+    // No status is sent any more, so an update with nothing written in it
+    // would record nothing at all - the server refuses it, and this says so
+    // without a round trip.
+    if (_note.text.trim().isEmpty && _parts.text.trim().isEmpty) {
+      setState(() => _error = 'Write what you found, or what you used.');
       return;
     }
 
@@ -65,7 +64,6 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
     try {
       await ref.read(staffRepositoryProvider).addUpdate(
             widget.complaintId,
-            status: _status,
             note: _note.text,
             partsUsed: _parts.text,
             visibleToCustomer: _visible,
@@ -80,8 +78,7 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // Keyboard and gesture-bar insets are applied by showSwarnimSheet, so this
-    // only has to worry about its own breathing room.
+    // Keyboard and gesture-bar insets come from showSwarnimSheet.
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
@@ -92,25 +89,13 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
               Text('Work update', style: SwarnimTheme.cardTitle),
               const SizedBox(height: 16),
 
-              if (widget.nextStatuses.isNotEmpty) ...[
-                Text('MOVE TO', style: SwarnimTheme.fieldLabel),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final s in widget.nextStatuses)
-                      _StatusChip(
-                        status: s,
-                        selected: _status == s,
-                        // Tapping the selected one clears it, so an update can
-                        // be a note alone without leaving the sheet.
-                        onTap: () => setState(() => _status = _status == s ? null : s),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-              ],
+              // No status picker.
+              //
+              // Picking a job up now starts it, and finishing it happens on
+              // the closure screen - so by the time anyone opens this sheet
+              // the status is already In progress and there is nothing left
+              // to choose. What is worth recording here is what was found
+              // and what was used.
 
               Text('NOTE', style: SwarnimTheme.fieldLabel),
               const SizedBox(height: 8),
@@ -178,38 +163,6 @@ class _UpdateSheetState extends ConsumerState<_UpdateSheet> {
             ],
           ),
         ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status, required this.selected, required this.onTap});
-
-  final WorkStatus status;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? SwarnimColors.navy : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? SwarnimColors.navy : SwarnimColors.borderLight),
-        ),
-        child: Text(
-          status.label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? SwarnimColors.inkOnDark : SwarnimColors.metaOnLight,
-          ),
-        ),
-      ),
     );
   }
 }

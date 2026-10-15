@@ -325,7 +325,10 @@ final leadRepositoryProvider =
 enum LeadScope { due, mine, all }
 
 class LeadFilter {
-  const LeadFilter({this.scope = LeadScope.due, this.search = ''});
+  // Opens on the salesperson's own leads. It used to open on Due, which
+  // is no longer offered as a chip - that left the list filtered with no
+  // visible way back to everything.
+  const LeadFilter({this.scope = LeadScope.mine, this.search = ''});
 
   final LeadScope scope;
   final String search;
