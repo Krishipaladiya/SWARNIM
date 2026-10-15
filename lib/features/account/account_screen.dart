@@ -114,12 +114,7 @@ class AccountScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             const BuiltByCredit(),
             const SizedBox(height: 6),
-            Text(
-              'Swarnim Connect · v1.0.0',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                  fontSize: 11, color: SwarnimColors.metaOnLight),
-            ),
+            const AppVersionLine(),
           ],
         ),
       ),

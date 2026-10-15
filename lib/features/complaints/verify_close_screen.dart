@@ -75,6 +75,9 @@ class _VerifyCloseScreenState extends ConsumerState<VerifyCloseScreen> {
   @override
   Widget build(BuildContext context) {
     return SwarnimScreen(
+      // No refresh here: this screen is being filled in, and
+      // re-fetching would either do nothing or disturb what has been typed.
+      showRefresh: false,
       title: 'Verify & Close',
       subtitle: _code == null ? null : '${_code!.complaintTitle} • ${_code!.complaintNumber}',
       leading: _BackButton(onTap: () => context.pop()),

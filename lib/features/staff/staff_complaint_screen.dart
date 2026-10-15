@@ -285,12 +285,15 @@ class _ActionsState extends ConsumerState<_Actions> {
         ),
         const SizedBox(height: 10),
 
-        SecondaryButton(
-          label: 'Assign to someone',
-          icon: Icons.person_add_alt,
-          onPressed: _busy ? null : () => _assign(),
-        ),
-        const SizedBox(height: 10),
+        // No "Assign to someone" here any more.
+        //
+        // Work is handed out by picking it up: an unclaimed complaint is
+        // visible to every engineer who could do it, and whoever claims it
+        // owns it. One engineer re-assigning another engineer's job from a
+        // phone was a second, competing way to decide the same thing, and it
+        // is the office - which can see the whole board - that should make
+        // that call. The server endpoint is untouched; Admin Central still
+        // assigns.
 
         // Offered as soon as the work has started - see _canFinish.
         //
@@ -319,60 +322,6 @@ class _ActionsState extends ConsumerState<_Actions> {
     );
   }
 
-  Future<void> _assign() async {
-    final people = await ref.read(staffRepositoryProvider).assignees().catchError(
-          (Object _) => <Assignee>[],
-        );
-
-    if (!mounted) return;
-
-    if (people.isEmpty) {
-      _say('No one is available to assign to.', bad: true);
-      return;
-    }
-
-    final chosen = await showModalBottomSheet<Assignee>(
-      context: context,
-      backgroundColor: Colors.white,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-              child: Text('Assign to', style: SwarnimTheme.cardTitle),
-            ),
-            for (final p in people)
-              ListTile(
-                leading: InitialsAvatar(_initials(p.name), size: 34),
-                title: Text(p.name,
-                    style: GoogleFonts.poppins(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: SwarnimColors.inkOnLight)),
-                subtitle: p.designation == null
-                    ? null
-                    : Text(p.designation!, style: SwarnimTheme.cardMeta),
-                onTap: () => Navigator.pop(context, p),
-              ),
-          ],
-        ),
-      ),
-    );
-
-    if (chosen == null) return;
-    await _run(() => ref.read(staffRepositoryProvider).assign(
-          widget.complaintId,
-          staffId: chosen.id,
-        ));
-  }
-
-  static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
-    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
-  }
 }
 
 /// History with the internal entries marked. Staff see everything; the marker

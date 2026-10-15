@@ -4,9 +4,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api_client.dart';
+import '../core/refresh.dart';
 import 'theme.dart';
 
 /// Bytes for one authenticated file, by API path.
@@ -80,6 +82,7 @@ class SwarnimScreen extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.fromLTRB(24, 20, 24, 24),
     this.onRefresh,
+    this.showRefresh = true,
   });
 
   final String title;
@@ -93,6 +96,13 @@ class SwarnimScreen extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
 
+  /// Shows the refresh button in the top right.
+  ///
+  /// Defaults to on, so a screen gets it by being a SwarnimScreen rather than
+  /// by remembering to ask. Turned off for the few screens where re-fetching
+  /// is meaningless or unwanted - a half-filled form, a confirmation step.
+  final bool showRefresh;
+
   /// Pull down to reload. Supplying this is all a screen has to do.
   ///
   /// Here rather than on each screen for the obvious reason - five screens
@@ -102,9 +112,10 @@ class SwarnimScreen extends StatelessWidget {
   /// when the content is short, and that is a property of the scroll view this
   /// widget owns, not of the screen's content.
   ///
-  /// There is deliberately no refresh BUTTON anywhere in the app. A button
-  /// costs a permanent piece of the toolbar to do what the surface itself can
-  /// do on a gesture every phone user already knows.
+  /// A refresh BUTTON sits in the header as well - see [showRefresh]. The
+  /// gesture is still the better affordance, but it is not discoverable on a
+  /// screen that does not scroll, and the office asked for something they
+  /// could point at and tap.
   final Future<void> Function()? onRefresh;
 
   @override
@@ -151,6 +162,10 @@ class SwarnimScreen extends StatelessWidget {
                       ),
                     ),
                     ?trailing,
+                    if (showRefresh) ...[
+                      if (trailing != null) const SizedBox(width: 4),
+                      const _RefreshButton(),
+                    ],
                   ],
                 ),
               ),
@@ -679,3 +694,103 @@ Future<T?> showSwarnimSheet<T>(
         );
       },
     );
+
+/// The refresh control in every screen header.
+///
+/// Spins while it works, which is the whole of its feedback design: a refresh
+/// that gives no sign it is running invites a second and a third tap, and the
+/// office's complaint was precisely that refreshing appeared to do nothing.
+/// It also refuses to re-enter while a refresh is in flight.
+class _RefreshButton extends ConsumerStatefulWidget {
+  const _RefreshButton();
+
+  @override
+  ConsumerState<_RefreshButton> createState() => _RefreshButtonState();
+}
+
+class _RefreshButtonState extends ConsumerState<_RefreshButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  Future<void> _go() async {
+    if (_busy) return;
+
+    setState(() => _busy = true);
+    _spin.repeat();
+
+    try {
+      await refreshEverything(ref);
+
+      // A deliberate floor on how fast this can finish. Everything above is a
+      // cache mark and a set of invalidations, which on a good connection
+      // complete inside a frame - the icon would flick and the user would be
+      // left unsure whether anything happened. One short turn of the icon is
+      // the acknowledgement.
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+    } finally {
+      if (mounted) {
+        _spin.stop();
+        _spin.reset();
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        onPressed: _busy ? null : _go,
+        tooltip: 'Refresh',
+        visualDensity: VisualDensity.compact,
+        icon: RotationTransition(
+          turns: _spin,
+          child: Icon(
+            Icons.refresh,
+            size: 22,
+            // Dimmed rather than greyed while it runs: the icon is still the
+            // thing that is moving, so it has to stay legible.
+            color: _busy
+                ? SwarnimColors.gold.withValues(alpha: 0.55)
+                : SwarnimColors.gold,
+          ),
+        ),
+      );
+}
+
+/// The "Swarnim Connect · v1.0.1" line at the foot of the account screens.
+///
+/// Reads the version from the build rather than from a string in the source.
+/// Both account screens used to carry their own copy, and both still said
+/// v1.0.0 after the build had moved to 1.0.1 - which is what a hand-maintained
+/// version number always does eventually.
+class AppVersionLine extends StatelessWidget {
+  const AppVersionLine({super.key});
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<PackageInfo>(
+        future: PackageInfo.fromPlatform(),
+        builder: (context, snap) {
+          // Nothing while it loads, and nothing if it fails. This is a
+          // footnote; a spinner or an error in its place would draw more
+          // attention than the version itself deserves.
+          final v = snap.data?.version;
+
+          return Text(
+            v == null ? 'Swarnim Connect' : 'Swarnim Connect · v$v',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+                fontSize: 11, color: SwarnimColors.metaOnLight),
+          );
+        },
+      );
+}

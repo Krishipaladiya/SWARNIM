@@ -99,6 +99,9 @@ class _StaffCloseScreenState extends ConsumerState<StaffCloseScreen> {
     final detail = ref.watch(staffComplaintProvider(widget.complaintId));
 
     return SwarnimScreen(
+      // No refresh here: this screen is being filled in, and
+      // re-fetching would either do nothing or disturb what has been typed.
+      showRefresh: false,
       title: 'Close complaint',
       subtitle: detail.maybeWhen(data: (d) => d.row.number, orElse: () => null),
       leading: InkResponse(

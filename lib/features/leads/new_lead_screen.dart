@@ -124,6 +124,9 @@ class _NewLeadScreenState extends ConsumerState<NewLeadScreen> {
   @override
   Widget build(BuildContext context) {
     return SwarnimScreen(
+      // No refresh here: this screen is being filled in, and
+      // re-fetching would either do nothing or disturb what has been typed.
+      showRefresh: false,
       title: 'New lead',
       subtitle: 'Name and mobile are enough to start',
       leading: InkResponse(

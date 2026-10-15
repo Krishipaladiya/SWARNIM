@@ -65,6 +65,35 @@ class HttpDiskCache {
 
   set userKey(String value) => _userKey = value.isEmpty ? 'anon' : value;
 
+  /// When the user last asked for fresh data.
+  ///
+  /// WHY THIS EXISTS
+  ///
+  /// Refresh did not work, and this is why. A fresh entry was answered
+  /// straight off the disk with no request at all, so re-running a provider -
+  /// which is what pull-to-refresh does - re-issued a request that the
+  /// interceptor satisfied from the same stored bytes. The screen dutifully
+  /// redrew the data it was already showing. Nothing was broken in the
+  /// providers; the request never left the phone.
+  ///
+  /// Marking the cache rather than the request is what makes one gesture cover
+  /// the whole screen. A screen reloads half a dozen endpoints - the
+  /// dashboard, the complaint list, the counts, the slider - and threading a
+  /// "really ask the server" flag down through every repository call to reach
+  /// them would be six chances to miss one. A timestamp here means any request
+  /// that follows the refresh revalidates, whoever makes it.
+  ///
+  /// It is a revalidation, NOT a cache purge. Entries keep their ETags, so an
+  /// unchanged list still costs one 304 and redraws from disk - the refresh
+  /// stays cheap on a site connection. And it deliberately does not reach
+  /// immutable entries: a stored photograph at a given id cannot have changed,
+  /// so re-downloading it on every pull would make refresh slow for no
+  /// possible gain.
+  DateTime _revalidateFrom = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Makes every stored response revalidate on its next use.
+  void revalidateAll() => _revalidateFrom = DateTime.now();
+
   String _keyFor(RequestOptions options) {
     // The token itself is NOT part of the key - it rotates on every refresh,
     // which would throw the whole cache away every few minutes. The subject
@@ -224,9 +253,15 @@ class _Entry {
   final List<int> bytes;
 
   /// Usable with no request at all.
-  bool get isFresh {
+  ///
+  /// [revalidateFrom] is the moment the user last asked for fresh data; an
+  /// entry stored before it is treated as stale so the next request goes to
+  /// the server. Immutable entries are exempt - see
+  /// HttpDiskCache._revalidateFrom for why.
+  bool isFresh(DateTime revalidateFrom) {
     if (immutable) return true;
     if (maxAge <= 0) return false;
+    if (storedAt.isBefore(revalidateFrom)) return false;
     return DateTime.now().difference(storedAt).inSeconds < maxAge;
   }
 }
@@ -250,7 +285,7 @@ class HttpCacheInterceptor extends Interceptor {
     final entry = await _cache._read(key);
     if (entry == null) return handler.next(options);
 
-    if (entry.isFresh) {
+    if (entry.isFresh(_cache._revalidateFrom)) {
       // Answered entirely from disk. This is the case that makes a document
       // or a photograph appear instantly the second time.
       return handler.resolve(_responseFrom(options, entry), true);
