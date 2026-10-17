@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api_client.dart';
 import 'http_cache.dart';
+import 'push.dart';
 
 /// Tokens live in the platform keystore (Android Keychain / iOS Keychain),
 /// never in SharedPreferences - a refresh token is a 30-day credential.
@@ -242,6 +244,11 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> signOut() async {
+    // Before the tokens go. Retiring the device needs a valid bearer token to
+    // prove whose handset it is, and site staff share phones - leaving it
+    // registered would send the next engineer the previous one's work.
+    await ref.read(pushServiceProvider).unregister();
+
     final refresh = await _store.readRefreshToken();
 
     // Best effort: the local session ends regardless of whether the server
@@ -304,6 +311,24 @@ class AuthController extends Notifier<AuthState> {
       // lifts by itself if the office allots the flat in the meantime.
       profileRequired: data['profileRequired'] as bool? ?? false,
     );
+
+    // Tell the server which handset to notify.
+    //
+    // Deliberately NOT awaited. Registration talks to Google and then to our
+    // own API, and the person is waiting to see their home screen - a slow
+    // network would turn sign-in into a stall. Nothing downstream depends on
+    // it having finished.
+    //
+    // Runs on a restored session too, not just a fresh sign-in: Firebase
+    // replaces tokens on reinstall and occasionally on its own, so re-sending
+    // on every start is what keeps a phone reachable.
+    final push = ref.read(pushServiceProvider);
+
+    // So a tapped notification lands on the staff screen for staff and the
+    // customer screen for a customer - the same complaint has a route in each.
+    push.isStaff = data['isStaff'] as bool? ?? false;
+
+    unawaited(push.registerForCurrentUser());
   }
 }
 

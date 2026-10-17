@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/router.dart';
+import 'core/push.dart';
 import 'app/theme.dart';
 
 /// The app's chrome is navy everywhere, so the system bars must draw LIGHT
@@ -24,7 +25,7 @@ const _systemBars = SystemUiOverlayStyle(
   systemNavigationBarDividerColor: Color(0xFF0D2031),
 );
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(_systemBars);
 
@@ -43,14 +44,38 @@ void main() {
   // customer's hand.
   GoogleFonts.config.allowRuntimeFetching = false;
 
+  // Before runApp, not after.
+  //
+  // A notification tapped while the app is closed is delivered during
+  // startup. If Firebase is not up by then the tap is lost and the app opens
+  // on the home screen, which looks like the notification did nothing.
+  await PushService.initialise();
+
   runApp(const ProviderScope(child: SwarnimConnectApp()));
 }
 
-class SwarnimConnectApp extends ConsumerWidget {
+class SwarnimConnectApp extends ConsumerStatefulWidget {
   const SwarnimConnectApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SwarnimConnectApp> createState() => _SwarnimConnectAppState();
+}
+
+class _SwarnimConnectAppState extends ConsumerState<SwarnimConnectApp> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Wired once, here, rather than from a screen: a notification tapped from
+    // a cold start is delivered before any screen exists, and a listener
+    // attached in a screen's initState would miss it.
+    ref.read(pushServiceProvider).wireTaps((route) {
+      if (mounted) ref.read(routerProvider).push(route);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Swarnim Connect',
       debugShowCheckedModeBanner: false,

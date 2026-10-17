@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Apple will not deliver a push to a build without this.
+
+	     "development" is correct for debug and TestFlight builds signed with a
+	     development profile; Xcode and most CI signing rewrite it to
+	     "production" for an App Store build. The App ID itself must also have
+	     the Push Notifications capability enabled in the Apple developer
+	     portal, which is a separate switch. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

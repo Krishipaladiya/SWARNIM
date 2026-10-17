@@ -21,7 +21,11 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # The part before "+" is CFBundleShortVersionString and has to go UP for
 # every submission. The part after it is overridden in CI by
 # --build-number=$PROJECT_BUILD_NUMBER, so only this one needs minding.
-version: 1.0.1+12
+# 1.0.2 because 1.0.1 has already been sent to App Store Connect. A version
+# string may not be reused once its train is closed - that is what errors
+# 90186 and 90062 were. The build number after the + is replaced by
+# $PROJECT_BUILD_NUMBER in CI, so only this part has to be maintained by hand.
+version: 1.0.2+13
 
 environment:
   sdk: ^3.13.2
@@ -56,6 +60,13 @@ dependencies:
   # and it was already wrong - the build is 1.0.1 - because nothing ties a
   # string in Dart to the version in this file. Now nothing can drift.
   package_info_plus: ^10.2.1
+
+  # Push notifications. firebase_core is the SDK handshake; firebase_messaging
+  # is the only Firebase product used - no analytics, no crash reporting, so
+  # the App Store privacy declaration stays to "device identifier, for
+  # notifications" and nothing else.
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
 dev_dependencies:
   flutter_test:
     sdk: flutter

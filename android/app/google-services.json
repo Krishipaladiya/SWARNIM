@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "257722816651",
+    "project_id": "swarnim-connect",
+    "storage_bucket": "swarnim-connect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:257722816651:android:ea0447f170dc7d227a9c8e",
+        "android_client_info": {
+          "package_name": "in.swarnim.swarnim_connect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0iSq1ACqrscDQ0IBJ18KxV-PPTYkDQKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

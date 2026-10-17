@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/media_viewer.dart';
 import '../../app/theme.dart';
 import '../../app/widgets.dart';
 import '../../core/api_client.dart';
@@ -527,7 +528,20 @@ class _Evidence extends ConsumerWidget {
         itemBuilder: (context, i) {
           final f = files[i];
 
-          return ClipRRect(
+          // Tappable. The tile used to be inert, so an engineer could see
+          // that the customer had photographed the problem and could not
+          // look at it - which is the only reason the photograph is there.
+          return GestureDetector(
+            onTap: () => showMediaViewer(
+              context,
+              ref,
+              initialIndex: i,
+              items: [
+                for (final x in files)
+                  MediaItem(path: x.url, isVideo: x.isVideo, caption: x.caption),
+              ],
+            ),
+            child: ClipRRect(
             borderRadius: BorderRadius.circular(SwarnimRadius.image),
             child: Container(
               width: 104,
@@ -570,7 +584,7 @@ class _Evidence extends ConsumerWidget {
                       },
                     ),
             ),
-          );
+          ));
         },
       ),
     );

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/media_viewer.dart';
 import '../../app/theme.dart';
 import '../../app/widgets.dart';
 import '../../core/complaints.dart';
@@ -219,19 +220,29 @@ class _Timeline extends StatelessWidget {
   }
 }
 
-class _Gallery extends StatelessWidget {
+class _Gallery extends ConsumerWidget {
   const _Gallery({required this.attachments});
 
   final List<ComplaintAttachment> attachments;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SwarnimScrollRow(
       height: 96,
       children: [
         for (var i = 0; i < attachments.length; i++) ...[
           if (i > 0) const SizedBox(width: 8),
-          ClipRRect(
+          GestureDetector(
+            onTap: () => showMediaViewer(
+              context,
+              ref,
+              initialIndex: i,
+              items: [
+                for (final a in attachments)
+                  MediaItem(path: '/api/v1/files/${a.id}', isVideo: a.isVideo),
+              ],
+            ),
+            child: ClipRRect(
             borderRadius: BorderRadius.circular(SwarnimRadius.control),
             child: SizedBox(
               width: 96,
@@ -250,7 +261,7 @@ class _Gallery extends StatelessWidget {
                       fit: BoxFit.cover,
                     ),
             ),
-          ),
+          )),
         ],
       ],
     );
