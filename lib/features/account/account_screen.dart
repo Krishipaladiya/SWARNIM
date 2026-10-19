@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme.dart';
-import '../../core/push.dart';
 import '../../app/widgets.dart';
 import '../../core/auth.dart';
 import '../../core/unit.dart';
@@ -114,19 +113,6 @@ class AccountScreen extends ConsumerWidget {
 
             const SizedBox(height: 20),
             const BuiltByCredit(),
-            const SizedBox(height: 6),
-            // Why notifications are or are not working on this handset.
-            //
-            // A TestFlight or Play build has no console, so when push
-            // silently did nothing there was no way to tell which step
-            // gave up - the only symptom was an empty table on the
-            // server. One quiet line here answers it from the phone.
-            Text(
-              'Notifications: ${PushService.status}',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                  fontSize: 10.5, color: SwarnimColors.metaOnLight),
-            ),
             const SizedBox(height: 6),
             const AppVersionLine(),
           ],

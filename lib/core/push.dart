@@ -104,6 +104,21 @@ class PushService {
         return;
       }
 
+      // Show the banner even when the app is open.
+      //
+      // iOS does NOT display a notification while the app is in the
+      // foreground - it hands it silently to the app and shows nothing. That
+      // is Apple's default and it is wrong for this app: an engineer reading
+      // a complaint when the closure code arrives, or a resident with the app
+      // open when their engineer picks the job up, would see nothing at all.
+      // It also made testing deeply confusing, because the server reported
+      // the message as delivered and the phone stayed blank.
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       // On iOS the APNs token can lag behind the FCM one just after launch,
       // and asking for the FCM token first returns null. Waiting for APNs
       // avoids a registration that silently never happens on a real iPhone.
