@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The status-bar notification icon.
+
+    WHY THIS EXISTS AND WHY IT IS A FLAT SILHOUETTE
+
+    Android does not draw a notification icon as supplied. Since API 21 it
+    takes the ALPHA CHANNEL ONLY and paints it a single colour, so handing it
+    the launcher icon - which is what happens when no icon is declared -
+    produces a white or grey blob where the logo should be. That is what this
+    app did on Android.
+
+    So this is one flat shape: every filled pixel becomes the accent colour,
+    every transparent pixel stays empty. A tower with a doorway, which reads
+    at 24dp where the Devanagari wordmark would not.
+
+    ONE PATH, evenOdd. The windows are sub-paths of the same path rather than
+    a second path drawn in transparent - a transparent fill paints nothing, it
+    does not subtract, so that approach leaves a solid slab. With evenOdd the
+    inner rectangles become holes, which is what makes this read as a building
+    rather than a block.
+
+    A vector rather than a set of PNGs: one file, sharp at every density.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M5,21V7l7,-4 7,4v14h-5v-5h-4v5z
+                          M8.5,8.5h2.2v2.2h-2.2z
+                          M13.3,8.5h2.2v2.2h-2.2z
+                          M8.5,12.2h2.2v2.2h-2.2z
+                          M13.3,12.2h2.2v2.2h-2.2z" />
+</vector>

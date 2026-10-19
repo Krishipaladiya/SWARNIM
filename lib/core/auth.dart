@@ -324,9 +324,11 @@ class AuthController extends Notifier<AuthState> {
     // on every start is what keeps a phone reachable.
     final push = ref.read(pushServiceProvider);
 
-    // So a tapped notification lands on the staff screen for staff and the
-    // customer screen for a customer - the same complaint has a route in each.
-    push.isStaff = data['isStaff'] as bool? ?? false;
+    // Releases any notification tap that arrived before this point - a tap
+    // from a cold start is delivered while the app is still reading its
+    // stored tokens, and the two app surfaces have different routes for the
+    // same complaint.
+    push.onSessionReady(isStaff: data['isStaff'] as bool? ?? false);
 
     unawaited(push.registerForCurrentUser());
   }

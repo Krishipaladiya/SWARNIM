@@ -11,4 +11,8 @@
          to the Dart screen, where the film starts playing, is a change of
          content and not a change of colour. -->
     <color name="swarnim_splash">#0D2031</color>
+
+    <!-- Tints the notification icon. Android paints the icon's silhouette in
+         this colour on Android 5 and later; without it the system picks grey. -->
+    <color name="swarnim_gold">#D4AF37</color>
 </resources>

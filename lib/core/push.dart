@@ -202,26 +202,76 @@ class PushService {
   /// that launched the app from cold; [onMessageOpenedApp] covers a tap while
   /// it was merely in the background. Wiring only the second means a
   /// notification tapped from a closed app opens the home screen, which reads
-  /// as the notification being broken.
+  /// as the notification doing nothing.
   ///
-  /// A message arriving while the app is OPEN is deliberately not handled
-  /// here. The system tray does not show it, and hijacking the screen someone
-  /// is already using would be worse than silence - the refresh button and
-  /// pull-to-refresh are how they see it.
+  /// A message arriving while the app is already OPEN is deliberately not
+  /// routed. iOS now shows the banner (see
+  /// setForegroundNotificationPresentationOptions above), and throwing
+  /// somebody off the screen they are using because a notification arrived
+  /// would be worse than letting them tap it.
   void wireTaps(void Function(String route) open) {
+    _open = open;
+
     if (!_initialised) return;
 
-    void handle(RemoteMessage? message) {
-      final route = _routeFor(message);
-      if (route != null) open(route);
-    }
-
-    FirebaseMessaging.instance.getInitialMessage().then(handle);
-    FirebaseMessaging.onMessageOpenedApp.listen(handle);
+    FirebaseMessaging.instance.getInitialMessage().then(_handleTap);
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleTap);
   }
 
-  /// The screen a notification points at, or null if it points at nothing.
-  String? _routeFor(RemoteMessage? message) {
+  void Function(String route)? _open;
+
+  /// A tap that arrived before the app knew who was signed in.
+  String? _pendingEntityId;
+
+  /// Set once the session is restored or a sign-in completes.
+  bool _sessionReady = false;
+
+  void _handleTap(RemoteMessage? message) {
+    final id = _entityIdOf(message);
+    if (id == null) return;
+
+    // THE COLD-START CASE, which is most taps.
+    //
+    // getInitialMessage resolves within moments of launch - before the stored
+    // tokens have been read, so the app does not yet know whether this is a
+    // customer or a member of staff, and the two have different routes for
+    // the same complaint. Worse, the router is still on its splash redirect
+    // and would discard anything pushed now.
+    //
+    // So the tap is held and replayed by [onSessionReady] once both are
+    // settled. Taps while the app is merely in the background skip this,
+    // because the session is already known.
+    if (!_sessionReady) {
+      _pendingEntityId = id;
+      return;
+    }
+
+    _openComplaint(id);
+  }
+
+  /// Called when the session is known - a fresh sign-in or a restored one.
+  void onSessionReady({required bool isStaff}) {
+    _isStaff = isStaff;
+    _sessionReady = true;
+
+    final pending = _pendingEntityId;
+    if (pending == null) return;
+
+    _pendingEntityId = null;
+
+    // One frame later, so the router has finished the redirect it performs
+    // the moment the session becomes known. Pushing into the middle of that
+    // loses the route.
+    Future<void>.delayed(const Duration(milliseconds: 400), () {
+      _openComplaint(pending);
+    });
+  }
+
+  void _openComplaint(String id) =>
+      _open?.call(_isStaff ? '/staff/complaints/$id' : '/complaints/$id');
+
+  /// The complaint a notification points at, or null if it points at nothing.
+  String? _entityIdOf(RemoteMessage? message) {
     if (message == null) return null;
 
     final data = message.data;
@@ -231,18 +281,15 @@ class PushService {
     final id = data['entityPublicId'] as String?;
     if (id == null || id.isEmpty) return null;
 
-    // 1 = Complaint, matching OtpEntityType on the server. Anything else is
-    // from a newer server than this build and is ignored rather than guessed.
+    // 1 = Complaint, matching OtpEntityType on the server. Anything else came
+    // from a newer server than this build and is ignored rather than guessed
+    // at - a wrong route is worse than none.
     if (data['entityType'] != '1') return null;
 
-    return _isStaff ? '/staff/complaints/$id' : '/complaints/$id';
+    return id;
   }
 
-  /// Which app surface this session is, so a tap lands on the right screen.
-  /// Set at registration, because the token already knows.
   bool _isStaff = false;
-
-  set isStaff(bool value) => _isStaff = value;
 
   /// Retires this handset on sign-out.
   ///
