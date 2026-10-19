@@ -42,6 +42,15 @@ class PushService {
 
   static bool _initialised = false;
 
+  /// What happened the last time registration ran, in one short sentence.
+  ///
+  /// Shown on the account screen. A TestFlight build has no console, so
+  /// without this the only symptom of a failure is an empty table on the
+  /// server and no way to tell which step gave up.
+  static String _status = 'Not set up yet.';
+
+  static String get status => _status;
+
   /// The token currently registered with the server, so sign-out can retire
   /// exactly that one rather than asking the SDK again at a point where it may
   /// already have been invalidated.
@@ -78,7 +87,10 @@ class PushService {
   /// is the pattern people decline out of hand. And the registration call
   /// needs a bearer token to say who the device belongs to.
   Future<void> registerForCurrentUser() async {
-    if (!_initialised) return;
+    if (!_initialised) {
+      _status = 'Notifications are unavailable on this build.';
+      return;
+    }
 
     try {
       final messaging = FirebaseMessaging.instance;
@@ -87,18 +99,24 @@ class PushService {
 
       // Denied is a normal answer, not an error. Android below 13 returns
       // authorized without prompting; iOS and Android 13+ actually ask.
-      if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+      if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        _status = 'Notifications are turned off for this app.';
+        return;
+      }
 
       // On iOS the APNs token can lag behind the FCM one just after launch,
       // and asking for the FCM token first returns null. Waiting for APNs
       // avoids a registration that silently never happens on a real iPhone.
-      if (Platform.isIOS) {
-        final apns = await messaging.getAPNSToken();
-        if (apns == null) return;
+      if (Platform.isIOS && !await _waitForApns(messaging)) {
+        _status = 'Apple did not issue a push token for this device.';
+        return;
       }
 
       final token = await messaging.getToken();
-      if (token == null || token.isEmpty) return;
+      if (token == null || token.isEmpty) {
+        _status = 'No notification token was issued.';
+        return;
+      }
 
       await _send(token);
 
@@ -107,8 +125,39 @@ class PushService {
       // token that no longer exists and the phone goes quiet for good.
       FirebaseMessaging.instance.onTokenRefresh.listen(_send);
     } catch (e) {
+      _status = 'Notification setup failed on this device.';
       debugPrint('Push registration failed: $e');
     }
+  }
+
+  /// Waits for Apple to hand over the device's APNs token.
+  ///
+  /// WHY A WAIT AND NOT A SINGLE CALL
+  ///
+  /// This asked once and gave up on null. On a real iPhone the APNs token is
+  /// almost always null for the first few seconds after launch - registration
+  /// with Apple is asynchronous and has not finished by the time somebody has
+  /// typed a password and signed in. So on every real device the answer was
+  /// null, this returned, and no token was ever registered. Nothing in the
+  /// logs, nothing on screen: the database simply stayed empty, which is
+  /// exactly what it did.
+  ///
+  /// It never showed in testing because Android has no APNs step at all.
+  ///
+  /// Asking for the FCM token before APNs is ready is not an option either -
+  /// it throws on iOS. So this polls briefly and then gives up honestly.
+  Future<bool> _waitForApns(FirebaseMessaging messaging) async {
+    // Ten seconds in short steps. Long enough for a slow first launch on a
+    // cold network, short enough that nobody is kept waiting - this runs in
+    // the background and the app is already usable.
+    for (var attempt = 0; attempt < 20; attempt++) {
+      final apns = await messaging.getAPNSToken();
+      if (apns != null && apns.isNotEmpty) return true;
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+
+    return false;
   }
 
   Future<void> _send(String token) async {
@@ -125,7 +174,9 @@ class PushService {
       });
 
       _registered = token;
+      _status = 'On. This device will receive notifications.';
     } catch (e) {
+      _status = 'Could not reach the server to register this device.';
       debugPrint('Could not register the device token: $e');
     }
   }

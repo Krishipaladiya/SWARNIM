@@ -25,7 +25,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # string may not be reused once its train is closed - that is what errors
 # 90186 and 90062 were. The build number after the + is replaced by
 # $PROJECT_BUILD_NUMBER in CI, so only this part has to be maintained by hand.
-version: 1.0.2+13
+version: 1.0.3+15
 
 environment:
   sdk: ^3.13.2

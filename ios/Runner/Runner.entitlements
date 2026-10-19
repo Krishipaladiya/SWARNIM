@@ -4,12 +4,17 @@
 <dict>
 	<!-- Apple will not deliver a push to a build without this.
 
-	     "development" is correct for debug and TestFlight builds signed with a
-	     development profile; Xcode and most CI signing rewrite it to
-	     "production" for an App Store build. The App ID itself must also have
-	     the Push Notifications capability enabled in the Apple developer
-	     portal, which is a separate switch. -->
+	     "production", not "development", and the distinction is the one that
+	     catches everybody: a TestFlight build runs against the PRODUCTION
+	     APNs environment, despite being a test build. With "development" here
+	     the phone registers a sandbox token while the server sends to
+	     production, and nothing arrives - no error on either side.
+
+	     Every build of this app reaches a device through TestFlight or the
+	     App Store, both of which are production. There is no Mac in this
+	     project to produce a development build, so there is no case where
+	     "development" would be the right value. -->
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>production</string>
 </dict>
 </plist>
